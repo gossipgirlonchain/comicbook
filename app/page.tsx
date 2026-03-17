@@ -1,9 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { usePrivy } from '@privy-io/react-auth';
-import PrivyConnect from '@/app/components/PrivyConnect';
+import Header from '@/app/components/Header';
 import VendingMachine from '@/app/components/VendingMachine';
 import PackReveal from '@/app/components/PackReveal';
 import { gachaApi } from '@/lib/api';
@@ -33,7 +31,6 @@ function getGrade(nft: Nft): string | null {
 }
 
 export default function Home() {
-  const { authenticated } = usePrivy();
   const [revealResults, setRevealResults] = useState<OpenPackResult[] | null>(null);
   const [turboMode, setTurboMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -46,11 +43,8 @@ export default function Home() {
       try {
         const { nfts } = await gachaApi.getNfts();
         if (alive) setLoadedCards(nfts ?? []);
-      } catch {
-        /* non-critical */
-      } finally {
-        if (alive) setCardsLoading(false);
-      }
+      } catch { /* */ }
+      finally { if (alive) setCardsLoading(false); }
     };
     load();
     return () => { alive = false; };
@@ -68,25 +62,8 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-[var(--cb-border)] bg-[var(--cb-primary)] sticky top-0 z-40">
-        <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cb-logo-white.png" alt="ComicBook.com" className="h-7 w-auto" />
-            <nav className="hidden md:flex items-center gap-4 text-sm">
-              {authenticated && (
-                <Link href="/inventory" className="text-white/60 hover:text-white transition-colors">
-                  Inventory
-                </Link>
-              )}
-            </nav>
-          </div>
-          <PrivyConnect />
-        </div>
-      </header>
+      <Header />
 
-      {/* Main content: card grid left, machine panel right */}
       <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* LEFT: Card grid */}
@@ -125,11 +102,7 @@ export default function Home() {
                       <div className="aspect-[3/4] bg-[var(--cb-bg)] p-2 relative">
                         {img ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={img}
-                            alt={name}
-                            className="w-full h-full object-contain rounded-lg"
-                          />
+                          <img src={img} alt={name} className="w-full h-full object-contain rounded-lg" />
                         ) : (
                           <div className="w-full h-full rounded-lg bg-[var(--cb-surface)]" />
                         )}
@@ -140,12 +113,8 @@ export default function Home() {
                       <div className="p-2.5 space-y-1">
                         <p className="text-xs font-semibold truncate">{name}</p>
                         <div className="flex items-center justify-between">
-                          {value && (
-                            <span className="text-xs font-bold text-[var(--cb-accent)]">{value}</span>
-                          )}
-                          {grade && (
-                            <span className="text-[10px] text-[var(--cb-text-muted)] font-medium">{grade}</span>
-                          )}
+                          {value && <span className="text-xs font-bold text-[var(--cb-accent)]">{value}</span>}
+                          {grade && <span className="text-[10px] text-[var(--cb-text-muted)] font-medium">{grade}</span>}
                         </div>
                         {rarity && colors && (
                           <span className={`inline-block text-[10px] font-bold px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}>
@@ -162,15 +131,11 @@ export default function Home() {
 
           {/* RIGHT: Machine panel */}
           <div className="w-full lg:w-[380px] flex-shrink-0">
-            <VendingMachine
-              key={refreshKey}
-              onResult={handleResult}
-            />
+            <VendingMachine key={refreshKey} onResult={handleResult} />
           </div>
         </div>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-[var(--cb-border)] bg-[var(--cb-surface)]/50 py-6 mt-auto">
         <div className="max-w-[1400px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--cb-text-muted)]">
           <div className="flex items-center gap-2">
@@ -182,7 +147,6 @@ export default function Home() {
         </div>
       </footer>
 
-      {/* Pack Reveal Overlay */}
       {revealResults && (
         <PackReveal
           results={revealResults}

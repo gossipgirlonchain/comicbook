@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
+import Header from '@/app/components/Header';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import NftGallery from '@/app/components/NftGallery';
 import { gachaApi } from '@/lib/api';
@@ -94,35 +95,9 @@ export default function InventoryPage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* Header */}
-      <header className="border-b border-[var(--cb-border)] bg-[var(--cb-primary)]/90 backdrop-blur-md sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link href="/" className="flex items-center gap-3">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/cb-logo-white.png"
-                alt="ComicBook.com"
-                className="h-7 w-auto"
-              />
-            </Link>
-            <span className="text-xs text-white/50 border-l border-white/20 pl-3 uppercase tracking-widest font-medium">
-              Inventory
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link
-              href="/"
-              className="text-sm text-white/70 hover:text-white transition-colors"
-            >
-              Vending Machine
-            </Link>
-            <PrivyConnect />
-          </div>
-        </div>
-      </header>
+      <Header />
 
-      <main className="flex-1 max-w-5xl mx-auto w-full px-4 py-8">
+      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 py-8">
         {!ready ? (
           <div className="flex justify-center py-20">
             <div className="spinner spinner-lg" />
@@ -272,7 +247,7 @@ export default function InventoryPage() {
 
       {/* Footer */}
       <footer className="border-t border-[var(--cb-border)] bg-[var(--cb-surface)]/50 py-6 mt-auto">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--cb-text-muted)]">
+        <div className="max-w-[1400px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--cb-text-muted)]">
           <div className="flex items-center gap-2">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/cb-bug-yellow.png" alt="" className="w-5 h-5" />
