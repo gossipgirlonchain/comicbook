@@ -1,25 +1,17 @@
+const path = require('path');
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: false,
-  experimental: {
-    turbo: {
-      loaders: {
-        // Suppress console warnings in development
-        '.js': ['babel-loader'],
-      },
-    },
+  images: {
+    remotePatterns: [
+      { protocol: 'https', hostname: '**.collectorcrypt.com' },
+      { protocol: 'https', hostname: '**.arweave.net' },
+      { protocol: 'https', hostname: '**.nftstorage.link' },
+    ],
   },
-  webpack: (config, { dev }) => {
-    if (dev) {
-      // Suppress React key warnings in development
-      config.module.rules.push({
-        test: /\.m?js$/,
-        resolve: {
-          fullySpecified: false,
-        },
-      });
-    }
-    return config;
+  turbopack: {
+    root: path.resolve(__dirname),
   },
 };
 

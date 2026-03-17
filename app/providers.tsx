@@ -2,56 +2,45 @@
 
 import React from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
-import { createSolanaRpc, createSolanaRpcSubscriptions } from '@solana/kit';
 import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
 
-const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID!;
-const clientId = process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID!;
-
-if (!appId || !clientId) {
-    throw new Error(
-        'Missing Privy env vars. Set NEXT_PUBLIC_PRIVY_APP_ID and NEXT_PUBLIC_PRIVY_CLIENT_ID.'
-    );
-}
+const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
 
 export default function Providers({ children }: { children: React.ReactNode }) {
+  if (!appId) {
     return (
-        <PrivyProvider
-            appId={appId}
-            clientId={clientId}
-            config={{
-                // Put wallet first so the Privy modal prioritizes wallet connect
-                loginMethods: ['google', 'wallet', 'email'],
-
-                // Ensure Solana wallets are actually offered in the UI
-                appearance: {
-                    walletChainType: 'ethereum-and-solana',
-                    // Add theme to potentially fix rendering issues
-                    theme: 'light',
-                },
-
-                embeddedWallets: {
-                    solana: { createOnLogin: 'users-without-wallets' },
-                    showWalletUIs: false,
-                },
-
-                externalWallets: { solana: { connectors: toSolanaWalletConnectors() } },
-
-                solana: {
-                    rpcs: {
-                        'solana:mainnet': {
-                            rpc: createSolanaRpc('https://api.mainnet-beta.solana.com'),
-                            rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.mainnet-beta.solana.com'),
-                        },
-                        'solana:devnet': {
-                            rpc: createSolanaRpc('https://api.devnet.solana.com'),
-                            rpcSubscriptions: createSolanaRpcSubscriptions('wss://api.devnet.solana.com'),
-                        },
-                    },
-                },
-            }}
-        >
-            {children}
-        </PrivyProvider>
+      <div className="min-h-screen flex items-center justify-center p-8">
+        <div className="max-w-md text-center space-y-4 rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-8">
+          <h2 className="text-xl font-bold">Configuration Required</h2>
+          <p className="text-[var(--cb-text-muted)] text-sm">
+            Set <code className="text-[var(--cb-accent)]">NEXT_PUBLIC_PRIVY_APP_ID</code> in your{' '}
+            <code>.env.local</code> file to enable wallet authentication.
+          </p>
+        </div>
+      </div>
     );
+  }
+
+  return (
+    <PrivyProvider
+      appId={appId}
+      config={{
+        loginMethods: ['google', 'wallet', 'email'],
+        appearance: {
+          walletChainType: 'ethereum-and-solana',
+          theme: 'dark',
+          accentColor: '#ffb91d',
+        },
+        embeddedWallets: {
+          solana: { createOnLogin: 'users-without-wallets' },
+          showWalletUIs: false,
+        },
+        externalWallets: {
+          solana: { connectors: toSolanaWalletConnectors() },
+        },
+      }}
+    >
+      {children}
+    </PrivyProvider>
+  );
 }

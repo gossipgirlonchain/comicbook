@@ -1,8 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ComicBook.com brand palette */
+  --cb-primary: #22386f;
+  --cb-secondary: #ffb91d;
+
+  /* Dark theme derived from brand navy */
+  --cb-bg: #080d1a;
+  --cb-surface: #0f1628;
+  --cb-surface-hover: #162040;
+  --cb-border: #1e2d52;
+  --cb-text: #e8ecf4;
+  --cb-text-muted: #7b8baa;
+  --cb-accent: #ffb91d;
+  --cb-accent-hover: #e6a200;
+  --cb-success: #10b981;
+  --cb-warning: #f59e0b;
+  --cb-error: #ef4444;
+
+  /* Rarity tiers */
+  --rarity-common: #6b7280;
+  --rarity-uncommon: #22c55e;
+  --rarity-rare: #3b82f6;
+  --rarity-epic: #a855f7;
+  --rarity-legendary: #eab308;
+
+  --background: var(--cb-bg);
+  --foreground: var(--cb-text);
 }
 
 @theme inline {
@@ -12,15 +36,197 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cb-border) transparent;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cb-bg);
+  color: var(--cb-text);
+  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  min-height: 100vh;
+}
+
+/* Card flip */
+.card-flip-container {
+  perspective: 1200px;
+}
+
+.card-flip-inner {
+  position: relative;
+  transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform-style: preserve-3d;
+}
+
+.card-flip-inner.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-flip-front,
+.card-flip-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.card-flip-back {
+  transform: rotateY(180deg);
+}
+
+/* Reveal entrance */
+@keyframes reveal-entrance {
+  0% {
+    opacity: 0;
+    transform: scale(0.6) translateY(40px);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.05) translateY(-5px);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+  }
+}
+
+.reveal-enter {
+  animation: reveal-entrance 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Rarity glow pulse */
+@keyframes rarity-glow {
+  0%, 100% { box-shadow: 0 0 15px 2px var(--glow-color, transparent); }
+  50% { box-shadow: 0 0 30px 6px var(--glow-color, transparent); }
+}
+
+.rarity-glow {
+  animation: rarity-glow 2s ease-in-out infinite;
+}
+
+/* Legendary shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.legendary-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 185, 29, 0.12) 25%,
+    rgba(255, 185, 29, 0.25) 50%,
+    rgba(255, 185, 29, 0.12) 75%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Vending machine shake */
+@keyframes machine-shake {
+  0%, 100% { transform: translateX(0); }
+  10% { transform: translateX(-4px) rotate(-0.5deg); }
+  20% { transform: translateX(4px) rotate(0.5deg); }
+  30% { transform: translateX(-3px) rotate(-0.3deg); }
+  40% { transform: translateX(3px) rotate(0.3deg); }
+  50% { transform: translateX(-2px); }
+  60% { transform: translateX(2px); }
+  70% { transform: translateX(-1px); }
+}
+
+.machine-shake {
+  animation: machine-shake 0.6s ease-in-out;
+}
+
+/* Horizontal scroll ticker */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  display: flex;
+  animation: ticker-scroll var(--ticker-duration, 30s) linear infinite;
+  width: max-content;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+/* Fade overlay */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.overlay-enter {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* Pulse dot */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(1.5); }
+}
+
+.pulse-dot {
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+/* Spinner */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spinner {
+  border: 3px solid var(--cb-border);
+  border-top-color: var(--cb-accent);
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  animation: spin 0.8s linear infinite;
+}
+
+.spinner-lg {
+  width: 40px;
+  height: 40px;
+  border-width: 4px;
+}
+
+/* Slide up */
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.slide-up {
+  animation: slide-up 0.4s ease-out forwards;
+}
+
+/* Brand gradient accents */
+.brand-gradient {
+  background: linear-gradient(135deg, var(--cb-primary) 0%, #1a2d5c 50%, #0f1a38 100%);
+}
+
+.brand-accent-gradient {
+  background: linear-gradient(135deg, var(--cb-secondary) 0%, #e6a200 100%);
+}
+
+/* Gold border for epic/legendary highlights */
+.gold-border {
+  border-color: var(--cb-secondary);
+  box-shadow: 0 0 12px rgba(255, 185, 29, 0.15);
+}
+
+/* Card pack hover lift */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.pack-hover:hover {
+  animation: float 2s ease-in-out infinite;
 }
