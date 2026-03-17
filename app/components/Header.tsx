@@ -12,7 +12,12 @@ export default function Header() {
   const navLinks = [
     { href: '/marketplace', label: 'Marketplace' },
     { href: '/', label: 'Gacha' },
-    ...(authenticated ? [{ href: '/inventory', label: 'Inventory' }] : []),
+    ...(authenticated
+      ? [
+          { href: '/inventory', label: 'Inventory' },
+          { href: '/profile', label: 'Profile' },
+        ]
+      : []),
   ];
 
   return (
