@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
+import Link from 'next/link';
 import Header from '@/app/components/Header';
 import { gachaApi } from '@/lib/api';
 import { getNftImageUrl } from '@/lib/solana';
@@ -263,10 +264,8 @@ function CardGridItem({ nft }: { nft: Nft }) {
   const colors = rarity ? RARITY_COLORS[rarity] : null;
 
   return (
-    <a
-      href={`https://collectorcrypt.com/assets/solana/${nft.id}`}
-      target="_blank"
-      rel="noreferrer"
+    <Link
+      href={`/marketplace/${nft.id}`}
       className={`group rounded-xl border overflow-hidden transition-all hover:-translate-y-1 hover:shadow-lg ${
         colors ? `${colors.border}` : 'border-[var(--cb-border)]'
       } bg-[var(--cb-surface)]`}
@@ -298,7 +297,7 @@ function CardGridItem({ nft }: { nft: Nft }) {
           </span>
         )}
       </div>
-    </a>
+    </Link>
   );
 }
 
@@ -311,10 +310,8 @@ function CardListItem({ nft }: { nft: Nft }) {
   const colors = rarity ? RARITY_COLORS[rarity] : null;
 
   return (
-    <a
-      href={`https://collectorcrypt.com/assets/solana/${nft.id}`}
-      target="_blank"
-      rel="noreferrer"
+    <Link
+      href={`/marketplace/${nft.id}`}
       className={`flex items-center gap-4 rounded-xl border p-3 transition-all hover:bg-[var(--cb-surface-hover)] ${
         colors ? `${colors.border}` : 'border-[var(--cb-border)]'
       } bg-[var(--cb-surface)]`}
@@ -343,6 +340,6 @@ function CardListItem({ nft }: { nft: Nft }) {
       {value > 0 && (
         <span className="text-sm font-bold text-[var(--cb-accent)]">${value}</span>
       )}
-    </a>
+    </Link>
   );
 }

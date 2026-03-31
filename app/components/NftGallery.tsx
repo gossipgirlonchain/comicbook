@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { gachaApi } from '@/lib/api';
 import { getNftImageUrl } from '@/lib/solana';
 import type { Nft } from '@/lib/types';
@@ -98,11 +99,9 @@ export default function NftGallery({ owner }: { owner?: string }) {
             : null;
 
           return (
-            <a
+            <Link
               key={nft.id || `nft-${i}`}
-              href={`https://collectorcrypt.com/assets/solana/${nft.id}`}
-              target="_blank"
-              rel="noreferrer"
+              href={`/marketplace/${nft.id}`}
               className={`group rounded-xl border overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${
                 colors
                   ? `${colors.border} hover:${colors.glow}`
@@ -138,7 +137,7 @@ export default function NftGallery({ owner }: { owner?: string }) {
                   )}
                 </div>
               </div>
-            </a>
+            </Link>
           );
         })}
       </div>
