@@ -195,7 +195,7 @@ export default function CardDetailPage() {
             <div className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-4 space-y-3">
               {!authenticated ? (
                 <div className="space-y-3 text-center">
-                  <p className="text-sm text-[var(--cb-text-muted)]">Connect your wallet to purchase this card.</p>
+                  <p className="text-sm text-[var(--cb-text-muted)]">Log in to purchase this card.</p>
                   <PrivyConnect />
                 </div>
               ) : (

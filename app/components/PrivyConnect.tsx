@@ -50,7 +50,7 @@ export default function PrivyConnect() {
         onClick={login}
         className="px-6 py-2.5 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)] font-bold text-sm transition-colors shadow-lg shadow-[var(--cb-accent)]/20"
       >
-        Connect Wallet
+        Log In
       </button>
     );
   }
