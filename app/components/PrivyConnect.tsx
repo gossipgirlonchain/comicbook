@@ -44,19 +44,18 @@ export default function PrivyConnect() {
     };
   }, [authenticated, wallet?.address]);
 
-  if (!ready) {
-    return (
-      <div className="h-10 w-40 rounded-lg bg-[var(--cb-surface)] animate-pulse" />
-    );
-  }
-
-  if (!authenticated) {
+  if (!ready || !authenticated) {
     return (
       <button
         onClick={login}
-        className="px-6 py-2.5 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)] font-bold text-sm transition-colors shadow-lg shadow-[var(--cb-accent)]/20"
+        disabled={!ready}
+        className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-lg shadow-[var(--cb-accent)]/20 ${
+          ready
+            ? 'bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)] cursor-pointer'
+            : 'bg-[var(--cb-accent)]/60 text-[var(--cb-primary)] cursor-wait'
+        }`}
       >
-        Connect Wallet
+        {ready ? 'Connect Wallet' : 'Connect Wallet'}
       </button>
     );
   }
