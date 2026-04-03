@@ -42,7 +42,7 @@ export default function VendingMachine({ onResult }: Props) {
   const [winners, setWinners] = React.useState<Winner[]>([]);
 
   const isYolo = yoloCount > 1;
-  const isRunning = status?.status === 'running';
+  const isRunning = status?.machineStatus === 'running';
   const canPurchase =
     ready && authenticated && !!wallet && isRunning && phase === 'idle';
 
@@ -52,7 +52,7 @@ export default function VendingMachine({ onResult }: Props) {
       try {
         const s = await gachaApi.getStatus();
         if (alive) setStatus(s);
-      } catch { /* */ }
+      } catch (e) { console.error('[VendingMachine] status poll failed:', e); }
     };
     poll();
     const id = setInterval(poll, 30_000);
@@ -65,7 +65,7 @@ export default function VendingMachine({ onResult }: Props) {
       try {
         const { winners: w } = await gachaApi.getAllWinners();
         if (alive) setWinners(w ?? []);
-      } catch { /* */ }
+      } catch (e) { console.error('[VendingMachine] winners fetch failed:', e); }
     };
     load();
     const id = setInterval(load, 30_000);
@@ -162,15 +162,15 @@ export default function VendingMachine({ onResult }: Props) {
       {/* Status indicator */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--cb-border)] bg-[var(--cb-primary)]/20">
         <div className="flex items-center gap-2">
-          <span className={`inline-block w-2 h-2 rounded-full ${isRunning ? 'bg-[var(--cb-success)] pulse-dot' : status?.status === 'stopped' ? 'bg-[var(--cb-error)]' : 'bg-[var(--cb-warning)]'}`} />
+          <span className={`inline-block w-2 h-2 rounded-full ${isRunning ? 'bg-[var(--cb-success)] pulse-dot' : status?.machineStatus === 'stopped' ? 'bg-[var(--cb-error)]' : 'bg-[var(--cb-warning)]'}`} />
           <span className="text-[11px] font-medium text-[var(--cb-text-muted)] uppercase tracking-wider">
-            {isRunning ? 'Online' : status?.status === 'stopped' ? 'Maintenance' : 'Loading...'}
+            {isRunning ? 'Online' : status?.machineStatus === 'stopped' ? 'Maintenance' : status ? 'Offline' : 'Loading...'}
           </span>
         </div>
       </div>
 
       {/* Maintenance banner */}
-      {status?.status === 'stopped' && (
+      {status?.machineStatus === 'stopped' && (
         <div className="px-4 py-2.5 bg-[var(--cb-error)]/10 border-b border-[var(--cb-error)]/30 text-center">
           <p className="text-sm text-[var(--cb-error)] font-medium">
             {status.message || 'Machine is under maintenance. Check back soon.'}

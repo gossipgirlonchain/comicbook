@@ -1,6 +1,13 @@
 export type GachaStatus = {
-  status: 'running' | 'stopped' | 'maintenance';
+  machineStatus: 'running' | 'stopped' | 'maintenance';
   message?: string;
+  gachas?: Array<{
+    code: string;
+    name: string;
+    price: number;
+    status: string;
+    isOpen: boolean | null;
+  }>;
 };
 
 export type StockInfo = {

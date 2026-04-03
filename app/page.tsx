@@ -43,7 +43,7 @@ export default function Home() {
       try {
         const { nfts } = await gachaApi.getNfts();
         if (alive) setLoadedCards(nfts ?? []);
-      } catch { /* */ }
+      } catch (e) { console.error('[Home] card load failed:', e); }
       finally { if (alive) setCardsLoading(false); }
     };
     load();
