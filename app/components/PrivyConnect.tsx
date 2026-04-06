@@ -63,7 +63,7 @@ export default function PrivyConnect() {
           <span className="font-mono text-sm text-[var(--cb-text)]">
             {wallet?.address
               ? `${wallet.address.slice(0, 4)}...${wallet.address.slice(-4)}`
-              : '—'}
+              : '-'}
           </span>
         </div>
 
@@ -74,7 +74,7 @@ export default function PrivyConnect() {
             <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
           ) : (
             <span className="text-sm font-bold text-[var(--cb-success)]">
-              {usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '—'}
+              {usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '-'}
             </span>
           )}
         </div>

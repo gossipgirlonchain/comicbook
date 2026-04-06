@@ -213,7 +213,7 @@ export default function CardDetailPage() {
                     ) : buyStatus === 'Purchase complete!' ? (
                       'Purchased!'
                     ) : (
-                      `Buy for $${insuredValue || '—'}`
+                      `Buy for $${insuredValue || '-'}`
                     )}
                   </button>
                   {buyError && (

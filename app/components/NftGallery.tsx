@@ -35,7 +35,10 @@ export default function NftGallery({ owner }: { owner?: string }) {
       setError(null);
       try {
         const { nfts: list } = await gachaApi.getNfts(owner);
-        if (alive) setNfts(list ?? []);
+        const filtered = owner
+          ? (list ?? []).filter((n) => n.ownership?.owner === owner)
+          : (list ?? []);
+        if (alive) setNfts(filtered);
       } catch (e) {
         if (alive)
           setError(e instanceof Error ? e.message : 'Failed to load NFTs');

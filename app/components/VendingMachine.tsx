@@ -40,6 +40,7 @@ export default function VendingMachine({ onResult }: Props) {
   const [error, setError] = React.useState<string | null>(null);
   const [shaking, setShaking] = React.useState(false);
   const [winners, setWinners] = React.useState<Winner[]>([]);
+  const [usdcBalance, setUsdcBalance] = React.useState<number | null>(null);
 
   const isYolo = yoloCount > 1;
   const isRunning = status?.machineStatus === 'running';
@@ -58,6 +59,27 @@ export default function VendingMachine({ onResult }: Props) {
     const id = setInterval(poll, 30_000);
     return () => { alive = false; clearInterval(id); };
   }, []);
+
+  React.useEffect(() => {
+    if (!wallet?.address) { setUsdcBalance(null); return; }
+    let alive = true;
+    const fetchBal = async () => {
+      try {
+        const res = await fetch('/api/getUsdcBalance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: wallet.address }),
+        });
+        if (res.ok && alive) {
+          const data = await res.json();
+          setUsdcBalance(data.balance ?? 0);
+        }
+      } catch { /* noop */ }
+    };
+    fetchBal();
+    const id = setInterval(fetchBal, 30_000);
+    return () => { alive = false; clearInterval(id); };
+  }, [wallet?.address]);
 
   React.useEffect(() => {
     let alive = true;
@@ -79,6 +101,11 @@ export default function VendingMachine({ onResult }: Props) {
 
   const handlePurchase = async () => {
     if (!wallet) return;
+    if (usdcBalance !== null && usdcBalance < price) {
+      setError(`Insufficient USDC balance. You need $${price} but have $${usdcBalance.toFixed(2)}.`);
+      setPhase('error');
+      return;
+    }
     setError(null);
     triggerShake();
     const w = wallet as unknown as WalletAdapter;
@@ -230,7 +257,7 @@ export default function VendingMachine({ onResult }: Props) {
                 disabled={yoloCount <= 1}
                 className="w-8 h-8 rounded-lg border border-[var(--cb-border)] bg-[var(--cb-bg)] text-[var(--cb-text)] text-sm font-bold hover:bg-[var(--cb-surface-hover)] disabled:opacity-30 transition-colors"
               >
-                −
+                -
               </button>
               <span className="w-8 text-center font-bold tabular-nums">{yoloCount}</span>
               <button
@@ -281,7 +308,7 @@ export default function VendingMachine({ onResult }: Props) {
             'Sign In to Open'
           ) : (
             <>
-              {isYolo ? `YOLO ${yoloCount} Packs — $${price}` : `Open Pack — $${price}`}
+              {isYolo ? `YOLO ${yoloCount} Packs - $${price}` : `Open Pack - $${price}`}
             </>
           )}
         </button>
@@ -332,9 +359,9 @@ export default function VendingMachine({ onResult }: Props) {
           </h4>
           <div className="space-y-1.5">
             <OddsRow color="var(--rarity-epic)" label="Epic" range="$250+" chance="1%" />
-            <OddsRow color="var(--rarity-rare)" label="Rare" range="$110 – $250" chance="4%" />
-            <OddsRow color="var(--rarity-uncommon)" label="Uncommon" range="$60 – $110" chance="15%" />
-            <OddsRow color="var(--rarity-common)" label="Common" range="$30 – $60" chance="80%" />
+            <OddsRow color="var(--rarity-rare)" label="Rare" range="$110 - $250" chance="4%" />
+            <OddsRow color="var(--rarity-uncommon)" label="Uncommon" range="$60 - $110" chance="15%" />
+            <OddsRow color="var(--rarity-common)" label="Common" range="$30 - $60" chance="80%" />
           </div>
         </div>
 

@@ -52,7 +52,10 @@ export default function ProfilePage() {
         ]);
 
         if (!alive) return;
-        if (nftRes.status === 'fulfilled') setNfts(nftRes.value.nfts ?? []);
+        if (nftRes.status === 'fulfilled') {
+          const all = nftRes.value.nfts ?? [];
+          setNfts(all.filter((n) => n.ownership?.owner === wallet.address));
+        }
         if (winnersRes.status === 'fulfilled') setWinners(winnersRes.value.winners ?? []);
         if (balanceRes.status === 'fulfilled') setUsdcBalance(balanceRes.value.balance ?? 0);
       } catch { /* */ }
@@ -146,7 +149,7 @@ export default function ProfilePage() {
 
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="USDC Balance" value={usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '—'} color="text-[var(--cb-success)]" loading={loading} />
+              <StatCard label="USDC Balance" value={usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '-'} color="text-[var(--cb-success)]" loading={loading} />
               <StatCard label="Total Points" value={totalPoints.toLocaleString()} color="text-[var(--cb-accent)]" loading={loading} />
               <StatCard label="NFTs Owned" value={String(nfts.length)} color="text-[var(--cb-text)]" loading={loading} />
               <StatCard label="Packs Opened" value={String(myWins.length)} color="text-[var(--cb-text)]" loading={loading} />
