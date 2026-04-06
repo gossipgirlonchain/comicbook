@@ -29,12 +29,16 @@ export default function PackReveal({
   const [showSummary, setShowSummary] = React.useState(
     turbo && isMulti ? true : false
   );
+  const [videoPhase, setVideoPhase] = React.useState<'playing' | 'done'>(
+    turbo ? 'done' : 'playing'
+  );
+  const videoRef = React.useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
-    if (turbo) return;
+    if (turbo || videoPhase !== 'done') return;
     const timer = setTimeout(() => setFlipped(true), 600);
     return () => clearTimeout(timer);
-  }, [currentIdx, turbo]);
+  }, [currentIdx, turbo, videoPhase]);
 
   const advanceOrSummary = () => {
     if (isMulti && currentIdx < results.length - 1) {
@@ -61,6 +65,32 @@ export default function PackReveal({
         onClose={onClose}
         onBuybackComplete={onBuybackComplete}
       />
+    );
+  }
+
+  if (videoPhase === 'playing') {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center overlay-enter"
+        style={{ background: 'rgba(8, 13, 26, 0.97)' }}
+        onClick={() => setVideoPhase('done')}
+      >
+        <video
+          ref={videoRef}
+          src="/gacha-video.webm"
+          autoPlay
+          muted
+          playsInline
+          onEnded={() => setVideoPhase('done')}
+          className="max-w-2xl w-full rounded-2xl"
+        />
+        <button
+          onClick={(e) => { e.stopPropagation(); setVideoPhase('done'); }}
+          className="absolute top-6 right-6 text-[var(--cb-text-muted)] hover:text-[var(--cb-text)] text-sm"
+        >
+          Skip &rarr;
+        </button>
+      </div>
     );
   }
 
