@@ -293,9 +293,9 @@ export default function VendingMachine({ onResult }: Props) {
           disabled={authenticated && !canPurchase}
           className={`w-full py-3.5 rounded-xl font-bold text-base transition-all ${
             !authenticated
-              ? 'bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)]'
+              ? 'bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)]'
               : canPurchase
-                ? 'bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)] shadow-lg shadow-[var(--cb-accent)]/25 active:scale-[0.98]'
+                ? 'bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] shadow-lg shadow-[var(--cb-accent)]/25 active:scale-[0.98]'
                 : 'bg-[var(--cb-border)] text-[var(--cb-text-muted)] cursor-not-allowed'
           }`}
         >

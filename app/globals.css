@@ -22,6 +22,7 @@
   --cb-text-muted: #7b8baa;
   --cb-accent: #ffb91d;
   --cb-accent-hover: #e6a200;
+  --cb-accent-text: #22386f;
   --cb-success: #10b981;
   --cb-warning: #f59e0b;
   --cb-error: #ef4444;
@@ -45,8 +46,9 @@ html.light {
   --cb-border: #c8d3e6;
   --cb-text: #1a2542;
   --cb-text-muted: #5a6a8a;
-  --cb-accent: #d4940a;
-  --cb-accent-hover: #b87e00;
+  --cb-accent: #22386f;
+  --cb-accent-hover: #1a2d5c;
+  --cb-accent-text: #ffffff;
   --cb-success: #059669;
   --cb-warning: #d97706;
   --cb-error: #dc2626;

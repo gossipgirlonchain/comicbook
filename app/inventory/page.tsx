@@ -119,7 +119,7 @@ export default function InventoryPage() {
                   onClick={() => setTab(t.id)}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     tab === t.id
-                      ? 'bg-[var(--cb-accent)] text-[var(--cb-primary)] font-bold shadow-sm'
+                      ? 'bg-[var(--cb-accent)] text-[var(--cb-accent-text)] font-bold shadow-sm'
                       : 'text-[var(--cb-text-muted)] hover:text-[var(--cb-text)]'
                   }`}
                 >
@@ -218,7 +218,7 @@ export default function InventoryPage() {
                           <button
                             onClick={() => openGiftedPack(pack)}
                             disabled={openingId === pack.id}
-                            className="w-full py-2 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)] text-sm font-bold disabled:opacity-50 transition-colors"
+                            className="w-full py-2 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] text-sm font-bold disabled:opacity-50 transition-colors"
                           >
                             {openingId === pack.id ? (
                               <span className="flex items-center justify-center gap-2">

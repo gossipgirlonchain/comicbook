@@ -203,7 +203,7 @@ export default function CardDetailPage() {
                   <button
                     onClick={handleBuy}
                     disabled={buying || buyStatus === 'Purchase complete!'}
-                    className="w-full py-3 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)] font-bold text-sm disabled:opacity-50 transition-colors"
+                    className="w-full py-3 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-bold text-sm disabled:opacity-50 transition-colors"
                   >
                     {buying ? (
                       <span className="flex items-center justify-center gap-2">

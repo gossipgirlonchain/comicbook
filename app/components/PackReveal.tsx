@@ -204,7 +204,7 @@ export default function PackReveal({
                     />
                     <button
                       onClick={advanceOrSummary}
-                      className="flex-1 py-2.5 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-primary)] font-semibold text-sm transition-colors"
+                      className="flex-1 py-2.5 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-semibold text-sm transition-colors"
                     >
                       {isMulti && currentIdx < results.length - 1
                         ? 'Next Card'
