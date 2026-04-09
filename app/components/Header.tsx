@@ -4,10 +4,12 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import PrivyConnect from '@/app/components/PrivyConnect';
+import { useTheme } from '@/lib/theme';
 
 export default function Header() {
   const pathname = usePathname();
   const { authenticated } = usePrivy();
+  const { theme, toggle } = useTheme();
 
   const navLinks = [
     { href: '/marketplace', label: 'Marketplace' },
@@ -54,7 +56,25 @@ export default function Header() {
             })}
           </nav>
         </div>
-        <PrivyConnect />
+        <div className="flex items-center gap-2">
+          <button
+            onClick={toggle}
+            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            {theme === 'dark' ? (
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <circle cx="12" cy="12" r="5" />
+                <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+              </svg>
+            ) : (
+              <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
+            )}
+          </button>
+          <PrivyConnect />
+        </div>
       </div>
     </header>
   );

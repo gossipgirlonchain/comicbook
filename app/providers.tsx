@@ -3,9 +3,38 @@
 import React from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
+import { ThemeProvider, useTheme } from '@/lib/theme';
 
 const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
 const clientId = process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID || '';
+
+function PrivyWrapper({ children }: { children: React.ReactNode }) {
+  const { theme } = useTheme();
+
+  return (
+    <PrivyProvider
+      appId={appId}
+      clientId={clientId}
+      config={{
+        loginMethods: ['google', 'wallet', 'email'],
+        appearance: {
+          walletChainType: 'ethereum-and-solana',
+          theme: theme,
+          accentColor: '#ffb91d',
+        },
+        embeddedWallets: {
+          solana: { createOnLogin: 'users-without-wallets' },
+          showWalletUIs: false,
+        },
+        externalWallets: {
+          solana: { connectors: toSolanaWalletConnectors() },
+        },
+      }}
+    >
+      {children}
+    </PrivyProvider>
+  );
+}
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   if (!appId || !clientId) {
@@ -24,26 +53,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <PrivyProvider
-      appId={appId}
-      clientId={clientId}
-      config={{
-        loginMethods: ['google', 'wallet', 'email'],
-        appearance: {
-          walletChainType: 'ethereum-and-solana',
-          theme: 'dark',
-          accentColor: '#ffb91d',
-        },
-        embeddedWallets: {
-          solana: { createOnLogin: 'users-without-wallets' },
-          showWalletUIs: false,
-        },
-        externalWallets: {
-          solana: { connectors: toSolanaWalletConnectors() },
-        },
-      }}
-    >
-      {children}
-    </PrivyProvider>
+    <ThemeProvider>
+      <PrivyWrapper>{children}</PrivyWrapper>
+    </ThemeProvider>
   );
 }

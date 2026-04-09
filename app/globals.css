@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Clash Grotesk";
+  font-style: normal;
+  font-weight: 200 700;
+  font-display: swap;
+  src: url(/fonts/ClashGrotesk-Variable.woff2) format('woff2');
+}
+
 :root {
   /* ComicBook.com brand palette */
   --cb-primary: #22386f;
@@ -29,6 +37,27 @@
   --foreground: var(--cb-text);
 }
 
+/* Light mode - ComicBook blueish white */
+html.light {
+  --cb-bg: #eef2f9;
+  --cb-surface: #ffffff;
+  --cb-surface-hover: #e4eaf5;
+  --cb-border: #c8d3e6;
+  --cb-text: #1a2542;
+  --cb-text-muted: #5a6a8a;
+  --cb-accent: #d4940a;
+  --cb-accent-hover: #b87e00;
+  --cb-success: #059669;
+  --cb-warning: #d97706;
+  --cb-error: #dc2626;
+
+  --rarity-common: #6b7280;
+  --rarity-uncommon: #16a34a;
+  --rarity-rare: #2563eb;
+  --rarity-epic: #9333ea;
+  --rarity-legendary: #ca8a04;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -44,7 +73,7 @@
 body {
   background: var(--cb-bg);
   color: var(--cb-text);
-  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  font-family: "Clash Grotesk", var(--font-sans, system-ui, -apple-system, sans-serif);
   min-height: 100vh;
 }
 
