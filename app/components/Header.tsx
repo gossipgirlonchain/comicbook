@@ -16,6 +16,7 @@ export default function Header() {
     { href: '/', label: 'Gacha' },
     ...(authenticated
       ? [
+          { href: '/deposit', label: 'Deposit' },
           { href: '/inventory', label: 'Inventory' },
           { href: '/profile', label: 'Profile' },
         ]
