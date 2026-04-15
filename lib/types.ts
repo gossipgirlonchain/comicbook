@@ -16,7 +16,11 @@ export type StockInfo = {
   [key: string]: { available: number; total: number } | undefined;
 };
 
-export type PackType = 'pokemon_50' | 'pokemon_250';
+// NOTE: Using backend pack type keys that are LIVE on dev-gacha. Tuomas's
+// spec was $25 / $50 / $150, but CC's dev backend only exposes $25 / $50 /
+// $250 today (no $150 tier exists yet). Top tier uses $250 until Andrew
+// confirms whether CC will add a $150 tier or keep $250 as the top.
+export type PackType = 'pokemon_25' | 'pokemon_50' | 'pokemon_250';
 
 export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
 
@@ -146,9 +150,13 @@ export interface WalletAdapter {
 }
 
 export const PACK_CONFIG = {
+  pokemon_25: { label: 'Starter Pack', price: 25, slug: 'starter' },
   pokemon_50: { label: 'Standard Pack', price: 50, slug: 'standard' },
   pokemon_250: { label: 'Legendary Pack', price: 250, slug: 'legendary' },
 } as const;
+
+// Capped YOLO multi-open counts. Single open is 1. Multi-open is one of these.
+export const YOLO_COUNTS = [1, 3, 5, 10, 20] as const;
 
 export const RARITY_COLORS: Record<Rarity, { bg: string; text: string; border: string; glow: string }> = {
   Common: { bg: 'bg-gray-700', text: 'text-gray-200', border: 'border-gray-500', glow: 'shadow-gray-500/30' },

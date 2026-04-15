@@ -9,14 +9,12 @@ import { RARITY_COLORS } from '@/lib/types';
 
 type Props = {
   results: OpenPackResult[];
-  turbo?: boolean;
   onClose: () => void;
   onBuybackComplete?: () => void;
 };
 
 export default function PackReveal({
   results,
-  turbo,
   onClose,
   onBuybackComplete,
 }: Props) {
@@ -25,20 +23,16 @@ export default function PackReveal({
 
   const isMulti = results.length > 1;
   const [currentIdx, setCurrentIdx] = React.useState(0);
-  const [flipped, setFlipped] = React.useState(turbo ?? false);
-  const [showSummary, setShowSummary] = React.useState(
-    turbo && isMulti ? true : false
-  );
-  const [videoPhase, setVideoPhase] = React.useState<'playing' | 'done'>(
-    turbo ? 'done' : 'playing'
-  );
+  const [flipped, setFlipped] = React.useState(false);
+  const [showSummary, setShowSummary] = React.useState(false);
+  const [videoPhase, setVideoPhase] = React.useState<'playing' | 'done'>('playing');
   const videoRef = React.useRef<HTMLVideoElement>(null);
 
   React.useEffect(() => {
-    if (turbo || videoPhase !== 'done') return;
+    if (videoPhase !== 'done') return;
     const timer = setTimeout(() => setFlipped(true), 600);
     return () => clearTimeout(timer);
-  }, [currentIdx, turbo, videoPhase]);
+  }, [currentIdx, videoPhase]);
 
   const advanceOrSummary = () => {
     if (isMulti && currentIdx < results.length - 1) {

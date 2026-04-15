@@ -104,7 +104,7 @@ export default function NftGallery({ owner }: { owner?: string }) {
           return (
             <Link
               key={nft.id || `nft-${i}`}
-              href={`/marketplace/${nft.id}`}
+              href={`/cards/${nft.id}`}
               className={`group rounded-xl border overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${
                 colors
                   ? `${colors.border} hover:${colors.glow}`

@@ -12,8 +12,8 @@ export default function Header() {
   const { theme, toggle } = useTheme();
 
   const navLinks = [
-    { href: '/marketplace', label: 'Marketplace' },
     { href: '/', label: 'Gacha' },
+    { href: '/how-it-works', label: 'How It Works' },
     ...(authenticated
       ? [
           { href: '/deposit', label: 'Deposit' },

@@ -32,7 +32,6 @@ function getGrade(nft: Nft): string | null {
 
 export default function Home() {
   const [revealResults, setRevealResults] = useState<OpenPackResult[] | null>(null);
-  const [turboMode, setTurboMode] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loadedCards, setLoadedCards] = useState<Nft[]>([]);
   const [cardsLoading, setCardsLoading] = useState(true);
@@ -50,8 +49,7 @@ export default function Home() {
     return () => { alive = false; };
   }, [refreshKey]);
 
-  const handleResult = (results: OpenPackResult[], turbo: boolean) => {
-    setTurboMode(turbo);
+  const handleResult = (results: OpenPackResult[]) => {
     setRevealResults(results);
   };
 
@@ -150,7 +148,6 @@ export default function Home() {
       {revealResults && (
         <PackReveal
           results={revealResults}
-          turbo={turboMode}
           onClose={closeReveal}
           onBuybackComplete={() => setRefreshKey((k) => k + 1)}
         />

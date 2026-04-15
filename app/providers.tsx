@@ -4,6 +4,7 @@ import React from 'react';
 import { PrivyProvider } from '@privy-io/react-auth';
 import { toSolanaWalletConnectors } from '@privy-io/react-auth/solana';
 import { ThemeProvider, useTheme } from '@/lib/theme';
+import HowToPlayModal from '@/app/components/HowToPlayModal';
 
 const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
 const clientId = process.env.NEXT_PUBLIC_PRIVY_CLIENT_ID || '';
@@ -32,6 +33,7 @@ function PrivyWrapper({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
+      <HowToPlayModal />
     </PrivyProvider>
   );
 }

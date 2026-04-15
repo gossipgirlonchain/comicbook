@@ -15,6 +15,7 @@ import type {
   OpenPackResult,
   WalletAdapter,
 } from '@/lib/types';
+import { PACK_CONFIG } from '@/lib/types';
 import PackReveal from '@/app/components/PackReveal';
 
 export default function InventoryPage() {
@@ -165,9 +166,7 @@ export default function InventoryPage() {
                           {new Date(pack.createdAt).toLocaleDateString()}
                         </div>
                         <div className="text-sm font-semibold">
-                          {pack.packType === 'pokemon_250'
-                            ? 'Legendary Pack'
-                            : 'Standard Pack'}
+                          {PACK_CONFIG[pack.packType]?.label ?? 'Pack'}
                         </div>
                         <div
                           className={`inline-block text-xs px-2 py-0.5 rounded-full ${
@@ -210,9 +209,7 @@ export default function InventoryPage() {
                           {pack.sender.slice(-4)}
                         </div>
                         <div className="text-sm font-semibold">
-                          {pack.packType === 'pokemon_250'
-                            ? 'Legendary Pack'
-                            : 'Standard Pack'}
+                          {PACK_CONFIG[pack.packType]?.label ?? 'Pack'}
                         </div>
                         {pack.status === 'pending' && (
                           <button

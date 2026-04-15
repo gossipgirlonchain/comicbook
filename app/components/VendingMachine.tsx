@@ -12,7 +12,7 @@ import type {
   WalletAdapter,
   Winner,
 } from '@/lib/types';
-import { PACK_CONFIG, RARITY_COLORS } from '@/lib/types';
+import { PACK_CONFIG, RARITY_COLORS, YOLO_COUNTS } from '@/lib/types';
 
 type PurchasePhase =
   | 'idle'
@@ -24,7 +24,7 @@ type PurchasePhase =
   | 'error';
 
 type Props = {
-  onResult: (results: OpenPackResult[], turbo: boolean) => void;
+  onResult: (results: OpenPackResult[]) => void;
 };
 
 export default function VendingMachine({ onResult }: Props) {
@@ -34,13 +34,12 @@ export default function VendingMachine({ onResult }: Props) {
 
   const [status, setStatus] = React.useState<GachaStatus | null>(null);
   const [selectedPack, setSelectedPack] = React.useState<PackType>('pokemon_50');
-  const [yoloCount, setYoloCount] = React.useState(1);
-  const [turboMode, setTurboMode] = React.useState(false);
+  const [yoloCount, setYoloCount] = React.useState<number>(1);
   const [phase, setPhase] = React.useState<PurchasePhase>('idle');
   const [error, setError] = React.useState<string | null>(null);
   const [shaking, setShaking] = React.useState(false);
   const [winners, setWinners] = React.useState<Winner[]>([]);
-  const [usdcBalance, setUsdcBalance] = React.useState<number | null>(null);
+  const [balance, setBalance] = React.useState<number | null>(null);
 
   const isYolo = yoloCount > 1;
   const isRunning = status?.machineStatus === 'running';
@@ -61,7 +60,7 @@ export default function VendingMachine({ onResult }: Props) {
   }, []);
 
   React.useEffect(() => {
-    if (!wallet?.address) { setUsdcBalance(null); return; }
+    if (!wallet?.address) { setBalance(null); return; }
     let alive = true;
     const fetchBal = async () => {
       try {
@@ -72,7 +71,7 @@ export default function VendingMachine({ onResult }: Props) {
         });
         if (res.ok && alive) {
           const data = await res.json();
-          setUsdcBalance(data.balance ?? 0);
+          setBalance(data.balance ?? 0);
         }
       } catch { /* noop */ }
     };
@@ -101,8 +100,8 @@ export default function VendingMachine({ onResult }: Props) {
 
   const handlePurchase = async () => {
     if (!wallet) return;
-    if (usdcBalance !== null && usdcBalance < price) {
-      setError(`Insufficient USDC balance. You need $${price} but have $${usdcBalance.toFixed(2)}.`);
+    if (balance !== null && balance < price) {
+      setError(`Insufficient balance. You need $${price} but have $${balance.toFixed(2)}. Add funds to continue.`);
       setPhase('error');
       return;
     }
@@ -130,7 +129,7 @@ export default function VendingMachine({ onResult }: Props) {
 
   const handleStandardPurchase = async (w: WalletAdapter) => {
     setPhase('generating');
-    const { transaction, memo } = await gachaApi.generatePack(w.address, selectedPack, turboMode || undefined);
+    const { transaction, memo } = await gachaApi.generatePack(w.address, selectedPack);
     setPhase('signing');
     const signed = await signTransaction(transaction, w);
     setPhase('submitting');
@@ -138,7 +137,7 @@ export default function VendingMachine({ onResult }: Props) {
     setPhase('opening');
     const result = await gachaApi.openPack(memo);
     setPhase('done');
-    onResult([result], turboMode);
+    onResult([result]);
     setTimeout(() => setPhase('idle'), 300);
   };
 
@@ -162,7 +161,7 @@ export default function VendingMachine({ onResult }: Props) {
       results.push(result);
     }
     setPhase('done');
-    onResult(results, turboMode);
+    onResult(results);
     setTimeout(() => setPhase('idle'), 300);
   };
 
@@ -206,27 +205,33 @@ export default function VendingMachine({ onResult }: Props) {
       )}
 
       <div className="p-4 space-y-4">
-        {/* Pack type selector */}
-        <div className="flex gap-2">
-          {(Object.entries(PACK_CONFIG) as [PackType, typeof PACK_CONFIG[PackType]][]).map(
-            ([type, c]) => {
-              const active = selectedPack === type;
-              return (
-                <button
-                  key={type}
-                  onClick={() => setSelectedPack(type)}
-                  disabled={!isRunning}
-                  className={`flex-1 rounded-lg border px-3 py-2 text-center transition-all text-sm font-semibold ${
-                    active
-                      ? 'border-[var(--cb-accent)] bg-[var(--cb-accent)]/10 text-[var(--cb-accent)]'
-                      : 'border-[var(--cb-border)] text-[var(--cb-text-muted)] hover:bg-[var(--cb-surface-hover)]'
-                  } disabled:opacity-40`}
-                >
-                  {c.slug === 'standard' ? 'STANDARD' : 'LEGENDARY'}
-                </button>
-              );
-            }
-          )}
+        {/* Pack type selector — three tiers */}
+        <div>
+          <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
+            Pack Tier
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {(Object.entries(PACK_CONFIG) as [PackType, typeof PACK_CONFIG[PackType]][]).map(
+              ([type, c]) => {
+                const active = selectedPack === type;
+                return (
+                  <button
+                    key={type}
+                    onClick={() => setSelectedPack(type)}
+                    disabled={!isRunning}
+                    className={`rounded-lg border px-2 py-3 text-center transition-all ${
+                      active
+                        ? 'border-[var(--cb-accent)] bg-[var(--cb-accent)]/10 text-[var(--cb-accent)]'
+                        : 'border-[var(--cb-border)] text-[var(--cb-text-muted)] hover:bg-[var(--cb-surface-hover)]'
+                    } disabled:opacity-40`}
+                  >
+                    <div className="text-lg font-bold">${c.price}</div>
+                    <div className="text-[10px] uppercase tracking-wider mt-0.5">{c.label.replace(' Pack', '')}</div>
+                  </button>
+                );
+              }
+            )}
+          </div>
         </div>
 
         {/* Pack info */}
@@ -241,50 +246,38 @@ export default function VendingMachine({ onResult }: Props) {
           </h3>
           <p className="text-2xl font-bold text-[var(--cb-accent)] mt-1">
             ${cfg.price}.00
-            <span className="text-xs font-normal text-[var(--cb-text-muted)] ml-1">USDC</span>
           </p>
         </div>
 
-        {/* YOLO + Turbo row */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
-            <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
-              Packs
-            </label>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={() => setYoloCount((c) => Math.max(1, c - 1))}
-                disabled={yoloCount <= 1}
-                className="w-8 h-8 rounded-lg border border-[var(--cb-border)] bg-[var(--cb-bg)] text-[var(--cb-text)] text-sm font-bold hover:bg-[var(--cb-surface-hover)] disabled:opacity-30 transition-colors"
-              >
-                -
-              </button>
-              <span className="w-8 text-center font-bold tabular-nums">{yoloCount}</span>
-              <button
-                onClick={() => setYoloCount((c) => Math.min(10, c + 1))}
-                disabled={yoloCount >= 10}
-                className="w-8 h-8 rounded-lg border border-[var(--cb-border)] bg-[var(--cb-bg)] text-[var(--cb-text)] text-sm font-bold hover:bg-[var(--cb-surface-hover)] disabled:opacity-30 transition-colors"
-              >
-                +
-              </button>
-              {isYolo && (
-                <span className="text-xs text-[var(--cb-text-muted)] ml-1">
-                  = ${price} USDC
-                </span>
-              )}
-            </div>
+        {/* YOLO count - capped segmented selector */}
+        <div>
+          <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
+            Open how many?
+          </label>
+          <div className="grid grid-cols-5 gap-1.5">
+            {YOLO_COUNTS.map((count) => {
+              const active = yoloCount === count;
+              return (
+                <button
+                  key={count}
+                  onClick={() => setYoloCount(count)}
+                  disabled={!isRunning}
+                  className={`rounded-lg border px-2 py-2 text-sm font-bold transition-all ${
+                    active
+                      ? 'border-[var(--cb-accent)] bg-[var(--cb-accent)]/10 text-[var(--cb-accent)]'
+                      : 'border-[var(--cb-border)] text-[var(--cb-text-muted)] hover:bg-[var(--cb-surface-hover)]'
+                  } disabled:opacity-40`}
+                >
+                  {count === 1 ? '1×' : `${count}×`}
+                </button>
+              );
+            })}
           </div>
-          <div>
-            <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
-              Turbo
-            </label>
-            <button
-              onClick={() => setTurboMode((t) => !t)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${turboMode ? 'bg-[var(--cb-accent)]' : 'bg-[var(--cb-border)]'}`}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${turboMode ? 'translate-x-5' : ''}`} />
-            </button>
-          </div>
+          {isYolo && (
+            <p className="text-xs text-[var(--cb-text-muted)] mt-1.5 text-right">
+              Total: <span className="text-[var(--cb-accent)] font-bold">${price}</span>
+            </p>
+          )}
         </div>
 
         {/* Purchase / Sign-in button */}
@@ -308,7 +301,7 @@ export default function VendingMachine({ onResult }: Props) {
             'Sign In to Open'
           ) : (
             <>
-              {isYolo ? `YOLO ${yoloCount} Packs - $${price}` : `Open Pack - $${price}`}
+              {isYolo ? `Open ${yoloCount} Packs - $${price}` : `Open Pack - $${price}`}
             </>
           )}
         </button>
@@ -323,11 +316,11 @@ export default function VendingMachine({ onResult }: Props) {
           </div>
         )}
 
-        {/* Devnet faucet */}
+        {/* Devnet faucet — hidden in prod */}
         {process.env.NEXT_PUBLIC_SOLANA_NETWORK !== 'mainnet-beta' && (
           <div className="flex items-center gap-2 text-xs text-[var(--cb-text-muted)]">
             <span className="w-2 h-2 rounded-full bg-[var(--cb-warning)]" />
-            <span>Devnet</span>
+            <span>Test Mode</span>
             <span className="text-[var(--cb-border)]">·</span>
             <a
               href="https://spl-token-faucet.com/?token-name=USDC-Dev"
@@ -335,7 +328,7 @@ export default function VendingMachine({ onResult }: Props) {
               rel="noopener noreferrer"
               className="text-[var(--cb-accent)] hover:underline"
             >
-              Get test USDC
+              Get test funds
             </a>
           </div>
         )}

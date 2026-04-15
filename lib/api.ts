@@ -125,12 +125,10 @@ export const gachaApi = {
   generatePack: (
     playerAddress: string,
     packType: PackType,
-    turbo?: boolean
   ) =>
     post<GeneratePackResponse>('generatePack', {
       playerAddress,
       packType,
-      ...(turbo && { turbo }),
     }),
 
   submitTransaction: (signedTransaction: string) =>

@@ -5,10 +5,12 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import Header from '@/app/components/Header';
 import PrivyConnect from '@/app/components/PrivyConnect';
+import ProfileIdentity from '@/app/components/ProfileIdentity';
 import { gachaApi } from '@/lib/api';
 import { getNftImageUrl } from '@/lib/solana';
 import type { Nft, Winner } from '@/lib/types';
 import { RARITY_COLORS, type Rarity } from '@/lib/types';
+import { readProfile, type UserProfile } from '@/lib/profile-storage';
 
 function getRarity(nft: Nft): Rarity | null {
   const v = nft.content?.metadata?.attributes?.find(
@@ -33,6 +35,14 @@ export default function ProfilePage() {
   const [winners, setWinners] = React.useState<Winner[]>([]);
   const [usdcBalance, setUsdcBalance] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
+  const [profile, setProfile] = React.useState<UserProfile>({
+    username: null,
+    avatarDataUrl: null,
+  });
+
+  React.useEffect(() => {
+    if (wallet?.address) setProfile(readProfile(wallet.address));
+  }, [wallet?.address]);
 
   React.useEffect(() => {
     if (!wallet?.address) return;
@@ -120,36 +130,16 @@ export default function ProfilePage() {
         ) : (
           <div className="space-y-6">
             {/* Profile header */}
-            <div className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-[var(--cb-primary)] flex items-center justify-center flex-shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/cb-bug-yellow.png" alt="" className="w-8 h-8" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h1 className="text-lg font-bold">
-                    {wallet?.address
-                      ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-6)}`
-                      : 'Profile'}
-                  </h1>
-                  {wallet?.address && (
-                    <p className="text-xs font-mono text-[var(--cb-text-muted)] truncate mt-0.5">
-                      {wallet.address}
-                    </p>
-                  )}
-                </div>
-                {myRank && (
-                  <div className="text-right">
-                    <span className="text-xs text-[var(--cb-text-muted)] uppercase tracking-wider">Rank</span>
-                    <p className="text-2xl font-bold text-[var(--cb-accent)]">#{myRank}</p>
-                  </div>
-                )}
-              </div>
-            </div>
+            <ProfileIdentity
+              address={wallet?.address}
+              profile={profile}
+              onProfileChange={setProfile}
+              rank={myRank}
+            />
 
             {/* Stats row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard label="USDC Balance" value={usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '-'} color="text-[var(--cb-success)]" loading={loading} />
+              <StatCard label="Balance" value={usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '-'} color="text-[var(--cb-success)]" loading={loading} />
               <StatCard label="Total Points" value={totalPoints.toLocaleString()} color="text-[var(--cb-accent)]" loading={loading} />
               <StatCard label="NFTs Owned" value={String(nfts.length)} color="text-[var(--cb-text)]" loading={loading} />
               <StatCard label="Packs Opened" value={String(myWins.length)} color="text-[var(--cb-text)]" loading={loading} />
@@ -271,8 +261,14 @@ export default function ProfilePage() {
                               </span>
                             </td>
                             <td className="py-3 pr-4">
-                              <span className={`font-mono text-xs ${isMe ? 'text-[var(--cb-accent)] font-bold' : 'text-[var(--cb-text)]'}`}>
-                                {entry.playerAddress.slice(0, 6)}...{entry.playerAddress.slice(-6)}
+                              <span className={`text-xs ${isMe ? 'text-[var(--cb-accent)] font-bold' : 'text-[var(--cb-text)]'}`}>
+                                {isMe && profile.username ? (
+                                  <span className="font-semibold">{profile.username}</span>
+                                ) : (
+                                  <span className="font-mono">
+                                    {entry.playerAddress.slice(0, 6)}...{entry.playerAddress.slice(-6)}
+                                  </span>
+                                )}
                                 {isMe && <span className="ml-2 text-[10px] text-[var(--cb-accent)]">(you)</span>}
                               </span>
                             </td>

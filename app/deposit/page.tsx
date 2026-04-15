@@ -70,11 +70,11 @@ export default function DepositPage() {
             <div>
               <h1 className="text-2xl font-bold">Add Funds</h1>
               <p className="text-sm text-[var(--cb-text-muted)] mt-1">
-                USDC for purchases, SOL for transaction fees
+                Top up your balance to open packs.
               </p>
             </div>
 
-            {/* Buy USDC with Card */}
+            {/* Buy with Card */}
             <div className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5 space-y-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[var(--cb-accent)]/10 flex items-center justify-center flex-shrink-0">
@@ -84,9 +84,9 @@ export default function DepositPage() {
                   </svg>
                 </div>
                 <div>
-                  <h2 className="text-base font-bold">Buy USDC with Card</h2>
+                  <h2 className="text-base font-bold">Buy with Card</h2>
                   <p className="text-xs text-[var(--cb-text-muted)]">
-                    Via Coinbase - no KYC under $500/week
+                    No ID required under $500/week
                   </p>
                 </div>
               </div>
@@ -99,10 +99,10 @@ export default function DepositPage() {
                 {buyLoading ? (
                   <span className="flex items-center justify-center gap-2">
                     <span className="spinner" style={{ width: 16, height: 16, borderWidth: 2 }} />
-                    Opening Coinbase...
+                    Opening checkout...
                   </span>
                 ) : (
-                  'Buy USDC'
+                  'Add Funds'
                 )}
               </button>
 
@@ -115,63 +115,55 @@ export default function DepositPage() {
               </p>
             </div>
 
-            {/* Transfer from external wallet */}
-            <div className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[var(--cb-accent)]/10 flex items-center justify-center flex-shrink-0">
-                  <svg className="w-5 h-5 text-[var(--cb-accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path d="M12 2L12 22M12 2L6 8M12 2L18 8" />
-                  </svg>
+            {/* Advanced transfer */}
+            <details className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5">
+              <summary className="cursor-pointer text-sm font-semibold text-[var(--cb-text-muted)] hover:text-[var(--cb-text)] transition-colors">
+                Advanced: Transfer from external wallet
+              </summary>
+              <div className="mt-4 space-y-3">
+                <p className="text-xs text-[var(--cb-text-muted)]">
+                  For advanced users. Send USDC or SOL on the Solana network
+                  to your deposit address below.
+                </p>
+                <div className="rounded-xl bg-[var(--cb-bg)] border border-[var(--cb-border)] p-3">
+                  <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider mb-1.5">
+                    Deposit Address
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <code className="flex-1 text-xs font-mono text-[var(--cb-text)] truncate">
+                      {wallet?.address || '...'}
+                    </code>
+                    <button
+                      onClick={copyAddress}
+                      className="px-3 py-1.5 rounded-lg border border-[var(--cb-border)] bg-[var(--cb-surface)] text-xs font-semibold text-[var(--cb-text)] hover:bg-[var(--cb-surface-hover)] transition-colors flex-shrink-0"
+                    >
+                      {copied ? 'Copied!' : 'Copy'}
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-base font-bold">Transfer USDC or SOL</h2>
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--cb-warning)]/10 border border-[var(--cb-warning)]/20">
+                  <svg className="w-4 h-4 text-[var(--cb-warning)] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.54 20h18.92a1 1 0 00.85-1.28l-8.6-14.86a1 1 0 00-1.72 0z" />
+                  </svg>
                   <p className="text-xs text-[var(--cb-text-muted)]">
-                    Send from another wallet on Solana
+                    Only send USDC or SOL on the Solana network. Other tokens or
+                    wrong networks will result in lost funds.
                   </p>
                 </div>
               </div>
+            </details>
 
-              <div className="rounded-xl bg-[var(--cb-bg)] border border-[var(--cb-border)] p-3">
-                <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider mb-1.5">
-                  Your Solana Address
-                </label>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 text-xs font-mono text-[var(--cb-text)] truncate">
-                    {wallet?.address || '...'}
-                  </code>
-                  <button
-                    onClick={copyAddress}
-                    className="px-3 py-1.5 rounded-lg border border-[var(--cb-border)] bg-[var(--cb-surface)] text-xs font-semibold text-[var(--cb-text)] hover:bg-[var(--cb-surface-hover)] transition-colors flex-shrink-0"
-                  >
-                    {copied ? 'Copied!' : 'Copy'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--cb-warning)]/10 border border-[var(--cb-warning)]/20">
-                <svg className="w-4 h-4 text-[var(--cb-warning)] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.54 20h18.92a1 1 0 00.85-1.28l-8.6-14.86a1 1 0 00-1.72 0z" />
-                </svg>
-                <p className="text-xs text-[var(--cb-text-muted)]">
-                  Only send <strong className="text-[var(--cb-text)]">USDC</strong> or{' '}
-                  <strong className="text-[var(--cb-text)]">SOL</strong> on the{' '}
-                  <strong className="text-[var(--cb-text)]">Solana</strong> network.
-                  Sending other tokens or using wrong networks will result in lost funds.
-                </p>
-              </div>
-            </div>
-
-            {/* Devnet faucet */}
+            {/* Test mode faucet */}
             {process.env.NEXT_PUBLIC_SOLANA_NETWORK !== 'mainnet-beta' && (
               <div className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5 space-y-2">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-[var(--cb-warning)]" />
                   <span className="text-xs font-semibold text-[var(--cb-warning)]">
-                    Devnet Mode
+                    Test Mode
                   </span>
                 </div>
                 <p className="text-xs text-[var(--cb-text-muted)]">
-                  You're on devnet. Use the faucet to get test USDC for free.
+                  Get free test funds to try out the machine.
                 </p>
                 <a
                   href="https://spl-token-faucet.com/?token-name=USDC-Dev"
@@ -179,7 +171,7 @@ export default function DepositPage() {
                   rel="noopener noreferrer"
                   className="inline-block px-4 py-2 rounded-lg border border-[var(--cb-border)] text-sm font-semibold text-[var(--cb-accent)] hover:bg-[var(--cb-surface-hover)] transition-colors"
                 >
-                  Get Test USDC
+                  Get Test Funds
                 </a>
               </div>
             )}
