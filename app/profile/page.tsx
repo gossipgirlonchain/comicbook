@@ -8,17 +8,10 @@ import PrivyConnect from '@/app/components/PrivyConnect';
 import ProfileIdentity from '@/app/components/ProfileIdentity';
 import { gachaApi } from '@/lib/api';
 import { getNftImageUrl } from '@/lib/solana';
-import type { Nft, Winner } from '@/lib/types';
+import type { Winner } from '@/lib/types';
 import { RARITY_COLORS, type Rarity } from '@/lib/types';
 import { readProfile, type UserProfile } from '@/lib/profile-storage';
-
-function getRarity(nft: Nft): Rarity | null {
-  const v = nft.content?.metadata?.attributes?.find(
-    (a) => a.trait_type === 'Rarity'
-  )?.value;
-  if (v && v in RARITY_COLORS) return v as Rarity;
-  return null;
-}
+import { winnersToCollection, type OwnedCard } from '@/lib/collection';
 
 type LeaderboardEntry = {
   playerAddress: string;
@@ -31,7 +24,6 @@ export default function ProfilePage() {
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
 
-  const [nfts, setNfts] = React.useState<Nft[]>([]);
   const [winners, setWinners] = React.useState<Winner[]>([]);
   const [usdcBalance, setUsdcBalance] = React.useState<number | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -39,10 +31,22 @@ export default function ProfilePage() {
     username: null,
     avatarDataUrl: null,
   });
+  // Forces the winners-derived collection to re-read localStorage after a
+  // buyback (since the sold-back set lives there, not in React state).
+  const [soldKey, setSoldKey] = React.useState(0);
 
   React.useEffect(() => {
     if (wallet?.address) setProfile(readProfile(wallet.address));
   }, [wallet?.address]);
+
+  // Re-read sold-back list when localStorage changes in another tab/component.
+  React.useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key && e.key.startsWith('cb-sold-back:')) setSoldKey((k) => k + 1);
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
 
   React.useEffect(() => {
     if (!wallet?.address) return;
@@ -51,8 +55,7 @@ export default function ProfilePage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [nftRes, winnersRes, balanceRes] = await Promise.allSettled([
-          gachaApi.getNfts(wallet.address),
+        const [winnersRes, balanceRes] = await Promise.allSettled([
           gachaApi.getAllWinners(),
           fetch('/api/getUsdcBalance', {
             method: 'POST',
@@ -62,10 +65,6 @@ export default function ProfilePage() {
         ]);
 
         if (!alive) return;
-        if (nftRes.status === 'fulfilled') {
-          const all = nftRes.value.nfts ?? [];
-          setNfts(all.filter((n) => n.ownership?.owner === wallet.address));
-        }
         if (winnersRes.status === 'fulfilled') setWinners(winnersRes.value.winners ?? []);
         if (balanceRes.status === 'fulfilled') setUsdcBalance(balanceRes.value.balance ?? 0);
       } catch { /* */ }
@@ -81,6 +80,13 @@ export default function ProfilePage() {
     return winners.filter((w) => w.playerAddress === wallet.address);
   }, [winners, wallet?.address]);
 
+  // Current collection = wins MINUS anything sold back (tracked locally).
+  // soldKey is in deps so this recomputes after a buyback updates localStorage.
+  const myCollection = React.useMemo<OwnedCard[]>(() => {
+    return winnersToCollection(winners, wallet?.address);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [winners, wallet?.address, soldKey]);
+
   const totalPoints = React.useMemo(() => {
     return myWins.reduce((sum, w) => sum + (w.points || 0), 0);
   }, [myWins]);
@@ -89,12 +95,11 @@ export default function ProfilePage() {
     const counts: Record<string, number> = {
       Legendary: 0, Epic: 0, Rare: 0, Uncommon: 0, Common: 0,
     };
-    nfts.forEach((nft) => {
-      const r = getRarity(nft);
-      if (r && r in counts) counts[r]++;
+    myCollection.forEach((card) => {
+      if (card.rarity && card.rarity in counts) counts[card.rarity]++;
     });
     return counts;
-  }, [nfts]);
+  }, [myCollection]);
 
   const leaderboard = React.useMemo((): LeaderboardEntry[] => {
     const map = new Map<string, number>();
@@ -141,7 +146,7 @@ export default function ProfilePage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <StatCard label="Balance" value={usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '-'} color="text-[var(--cb-success)]" loading={loading} />
               <StatCard label="Total Points" value={totalPoints.toLocaleString()} color="text-[var(--cb-accent)]" loading={loading} />
-              <StatCard label="NFTs Owned" value={String(nfts.length)} color="text-[var(--cb-text)]" loading={loading} />
+              <StatCard label="NFTs Owned" value={String(myCollection.length)} color="text-[var(--cb-text)]" loading={loading} />
               <StatCard label="Packs Opened" value={String(myWins.length)} color="text-[var(--cb-text)]" loading={loading} />
             </div>
 
@@ -158,13 +163,13 @@ export default function ProfilePage() {
                       <div key={i} className="h-8 rounded bg-[var(--cb-bg)] animate-pulse" />
                     ))}
                   </div>
-                ) : nfts.length === 0 ? (
+                ) : myCollection.length === 0 ? (
                   <p className="text-sm text-[var(--cb-text-muted)]">No NFTs in collection yet.</p>
                 ) : (
                   <div className="space-y-2">
                     {(['Legendary', 'Epic', 'Rare', 'Uncommon', 'Common'] as Rarity[]).map((rarity) => {
                       const count = rarityCounts[rarity] || 0;
-                      const pct = nfts.length > 0 ? (count / nfts.length) * 100 : 0;
+                      const pct = myCollection.length > 0 ? (count / myCollection.length) * 100 : 0;
                       const colors = RARITY_COLORS[rarity];
                       return (
                         <div key={rarity} className="flex items-center gap-3">

@@ -261,6 +261,7 @@ export default function InventoryPage() {
             setRevealResult(null);
             setRefreshKey((k) => k + 1);
           }}
+          onBuybackComplete={() => setRefreshKey((k) => k + 1)}
         />
       )}
     </div>

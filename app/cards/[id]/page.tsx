@@ -6,21 +6,21 @@ import { useParams } from 'next/navigation';
 import Header from '@/app/components/Header';
 import { gachaApi } from '@/lib/api';
 import { getNftImageUrl } from '@/lib/solana';
-import type { Nft } from '@/lib/types';
+import type { NftWon } from '@/lib/types';
 import { RARITY_COLORS, type Rarity } from '@/lib/types';
 
-function getAttr(nft: Nft, trait: string): string | null {
+function getAttr(nft: NftWon, trait: string): string | null {
   return (
-    nft.content?.metadata?.attributes?.find(
-      (a) => a.trait_type === trait
-    )?.value || null
+    nft.content.metadata.attributes.find((a) => a.trait_type === trait)
+      ?.value || null
   );
 }
 
 export default function CardDetailPage() {
   const { id } = useParams<{ id: string }>();
 
-  const [nft, setNft] = React.useState<Nft | null>(null);
+  const [nft, setNft] = React.useState<NftWon | null>(null);
+  const [cardRarity, setCardRarity] = React.useState<Rarity | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [notFound, setNotFound] = React.useState(false);
 
@@ -29,11 +29,20 @@ export default function CardDetailPage() {
     (async () => {
       setLoading(true);
       try {
-        const { nfts } = await gachaApi.getNfts();
-        const found = (nfts ?? []).find((n) => n.id === id);
+        // Cards in a user's collection live in the winners feed, not in the
+        // getNfts pool (which returns CC's house inventory). Look up by
+        // nft_address or NftWon.id.
+        const { winners } = await gachaApi.getAllWinners();
+        const win = (winners ?? []).find(
+          (w) => (w.nft_address ?? w.nftWon.id) === id
+        );
         if (alive) {
-          if (found) setNft(found);
-          else setNotFound(true);
+          if (win) {
+            setNft(win.nftWon);
+            setCardRarity(win.rarity);
+          } else {
+            setNotFound(true);
+          }
         }
       } catch {
         if (alive) setNotFound(true);
@@ -76,13 +85,12 @@ export default function CardDetailPage() {
     );
   }
 
-  const name = nft.content?.metadata?.name || nft.id;
-  const description = nft.content?.metadata?.description || null;
+  const name = nft.content.metadata.name || nft.id;
+  const description = nft.content.metadata.description || null;
   const img = getNftImageUrl(nft);
-  const rarity = getAttr(nft, 'Rarity') as Rarity | null;
+  const rarity = cardRarity ?? (getAttr(nft, 'Rarity') as Rarity | null);
   const grade = getAttr(nft, 'The Grade');
   const insuredValue = getAttr(nft, 'Insured Value');
-  const owner = nft.ownership?.owner;
   const colors = rarity && rarity in RARITY_COLORS ? RARITY_COLORS[rarity] : null;
 
   return (
@@ -176,16 +184,6 @@ export default function CardDetailPage() {
                   </span>
                   <span className="text-sm font-bold text-[var(--cb-accent)]">
                     ${insuredValue}
-                  </span>
-                </div>
-              )}
-              {owner && (
-                <div className="flex items-center justify-between py-2 border-b border-[var(--cb-border)]">
-                  <span className="text-sm text-[var(--cb-text-muted)]">
-                    Owner
-                  </span>
-                  <span className="text-xs font-mono text-[var(--cb-text-muted)]">
-                    {owner.slice(0, 4)}...{owner.slice(-4)}
                   </span>
                 </div>
               )}

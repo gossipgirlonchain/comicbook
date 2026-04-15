@@ -6,6 +6,7 @@ import { gachaApi, ApiError } from '@/lib/api';
 import { signTransaction, getNftImageUrl } from '@/lib/solana';
 import type { OpenPackResult, WalletAdapter } from '@/lib/types';
 import { RARITY_COLORS } from '@/lib/types';
+import { markSoldBack } from '@/lib/collection';
 
 type Props = {
   results: OpenPackResult[];
@@ -246,14 +247,16 @@ function BuybackButton({
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [done, setDone] = React.useState(false);
+  const [confirming, setConfirming] = React.useState(false);
 
-  const sellPrice = (() => {
+  const insuredValue = (() => {
     const attr = result.nftWon.content.metadata.attributes.find(
       (a) => a.trait_type === 'Insured Value'
     );
-    const v = attr ? parseFloat(attr.value) : 0;
-    return (v * 0.85).toFixed(2);
+    return attr ? parseFloat(attr.value) : 0;
   })();
+
+  const sellPrice = (insuredValue * 0.85).toFixed(2);
 
   const handleBuyback = async () => {
     if (!wallet) return;
@@ -273,7 +276,12 @@ function BuybackButton({
         await gachaApi.pollBuybackCheck(memo);
       }
 
+      // Record locally so the card disappears from My Collection. CC has no
+      // per-card buyback flag yet, so this is a pragmatic stopgap.
+      markSoldBack(wallet.address, result.nft_address);
+
       setDone(true);
+      setConfirming(false);
       onComplete?.();
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
@@ -295,17 +303,144 @@ function BuybackButton({
   }
 
   return (
-    <div className="flex-1">
-      <button
-        onClick={handleBuyback}
-        disabled={busy || !wallet}
-        className="w-full py-2.5 rounded-lg border border-[var(--cb-accent)]/40 text-[var(--cb-accent)] font-semibold text-sm hover:bg-[var(--cb-accent)]/10 disabled:opacity-40 transition-colors"
-      >
-        {busy ? 'Selling...' : `Sell $${sellPrice}`}
-      </button>
-      {error && (
-        <p className="text-xs text-[var(--cb-error)] mt-1">{error}</p>
+    <>
+      <div className="flex-1">
+        <button
+          onClick={() => setConfirming(true)}
+          disabled={busy || !wallet}
+          className="w-full py-2.5 rounded-lg border border-[var(--cb-accent)]/40 text-[var(--cb-accent)] font-semibold text-sm hover:bg-[var(--cb-accent)]/10 disabled:opacity-40 transition-colors"
+        >
+          {busy ? 'Selling...' : `Sell $${sellPrice}`}
+        </button>
+        {error && (
+          <p className="text-xs text-[var(--cb-error)] mt-1">{error}</p>
+        )}
+      </div>
+
+      {confirming && (
+        <SellConfirmDialog
+          cardName={result.nftWon.content.metadata.name}
+          cardImage={getNftImageUrl(result.nftWon)}
+          insuredValue={insuredValue}
+          sellPrice={sellPrice}
+          busy={busy}
+          error={error}
+          onCancel={() => {
+            if (busy) return;
+            setConfirming(false);
+            setError(null);
+          }}
+          onConfirm={handleBuyback}
+        />
       )}
+    </>
+  );
+}
+
+function SellConfirmDialog({
+  cardName,
+  cardImage,
+  insuredValue,
+  sellPrice,
+  busy,
+  error,
+  onCancel,
+  onConfirm,
+}: {
+  cardName: string;
+  cardImage: string;
+  insuredValue: number;
+  sellPrice: string;
+  busy: boolean;
+  error: string | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(8, 13, 26, 0.92)' }}
+      onClick={onCancel}
+    >
+      <div
+        className="relative max-w-sm w-full rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-6 space-y-4 reveal-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-4">
+          <div className="w-20 h-20 rounded-lg bg-[var(--cb-bg)] flex-shrink-0 overflow-hidden border border-[var(--cb-border)]">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={cardImage}
+              alt={cardName}
+              className="w-full h-full object-contain p-1"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-bold truncate">Sell back to house?</h3>
+            <p className="text-xs text-[var(--cb-text-muted)] truncate mt-0.5">
+              {cardName}
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-bg)] p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--cb-text-muted)]">Insured value</span>
+            <span className="font-semibold">${insuredValue.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--cb-text-muted)]">Buyback rate</span>
+            <span className="font-semibold">85%</span>
+          </div>
+          <div className="h-px bg-[var(--cb-border)]" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--cb-text-muted)]">
+              You receive
+            </span>
+            <span className="text-xl font-bold text-[var(--cb-success)]">
+              ${sellPrice}
+            </span>
+          </div>
+        </div>
+
+        <p className="text-[11px] text-[var(--cb-text-muted)] leading-snug">
+          The card will be returned to the house and cannot be recovered.
+          Funds arrive in your wallet instantly once the transaction confirms.
+        </p>
+
+        {error && (
+          <p className="text-xs text-[var(--cb-error)] bg-[var(--cb-error)]/10 border border-[var(--cb-error)]/30 rounded-lg p-2">
+            {error}
+          </p>
+        )}
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onCancel}
+            disabled={busy}
+            className="flex-1 py-2.5 rounded-lg border border-[var(--cb-border)] text-sm font-semibold text-[var(--cb-text-muted)] hover:text-[var(--cb-text)] hover:bg-[var(--cb-surface-hover)] transition-colors disabled:opacity-40"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={busy}
+            className="flex-1 py-2.5 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] text-sm font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {busy ? (
+              <>
+                <span
+                  className="spinner"
+                  style={{ width: 14, height: 14, borderWidth: 2 }}
+                />
+                Selling...
+              </>
+            ) : (
+              `Confirm Sell $${sellPrice}`
+            )}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
