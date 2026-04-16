@@ -30,7 +30,19 @@ export default function ProfileIdentity({
   );
   const [error, setError] = React.useState<string | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [addressCopied, setAddressCopied] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const copyAddress = async () => {
+    if (!address) return;
+    try {
+      await navigator.clipboard.writeText(address);
+      setAddressCopied(true);
+      setTimeout(() => setAddressCopied(false), 2000);
+    } catch {
+      /* clipboard unavailable */
+    }
+  };
 
   React.useEffect(() => {
     setDraftUsername(profile.username ?? '');
@@ -212,6 +224,27 @@ export default function ProfileIdentity({
           )}
         </div>
       </div>
+
+      {/* Wallet address — used during testing so the team can send you
+          devnet USDC. Kept in a subdued row so it doesn't dominate the card. */}
+      {address && !editing && (
+        <div className="mt-4 pt-4 border-t border-[var(--cb-border)] flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider mb-0.5">
+              Wallet Address
+            </p>
+            <p className="text-xs font-mono text-[var(--cb-text)] truncate">
+              {address}
+            </p>
+          </div>
+          <button
+            onClick={copyAddress}
+            className="flex-shrink-0 px-3 py-1.5 rounded-lg border border-[var(--cb-border)] bg-[var(--cb-bg)] text-xs font-semibold text-[var(--cb-text)] hover:bg-[var(--cb-surface-hover)] transition-colors"
+          >
+            {addressCopied ? 'Copied!' : 'Copy'}
+          </button>
+        </div>
+      )}
 
       {/* Stored-locally notice */}
       {editing && (
