@@ -89,11 +89,7 @@ export default function ProfileIdentity({
 
   const removeAvatar = () => setDraftAvatar(null);
 
-  const displayName =
-    profile.username ||
-    (address
-      ? `${address.slice(0, 6)}...${address.slice(-6)}`
-      : 'Profile');
+  const displayName = profile.username || 'Your Name';
 
   const avatarSrc = (editing ? draftAvatar : profile.avatarDataUrl) || null;
 
@@ -169,14 +165,7 @@ export default function ProfileIdentity({
               )}
             </div>
           ) : (
-            <>
-              <h1 className="text-lg font-bold">{displayName}</h1>
-              {address && (
-                <p className="text-[10px] font-mono text-[var(--cb-text-muted)] truncate mt-0.5">
-                  {address}
-                </p>
-              )}
-            </>
+            <h1 className="text-lg font-bold">{displayName}</h1>
           )}
           {error && (
             <p className="text-xs text-[var(--cb-error)] mt-1">{error}</p>

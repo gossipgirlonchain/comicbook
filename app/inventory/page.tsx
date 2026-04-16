@@ -5,37 +5,26 @@ import Link from 'next/link';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import Header from '@/app/components/Header';
+import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import NftGallery from '@/app/components/NftGallery';
 import { gachaApi } from '@/lib/api';
-import { signMessage } from '@/lib/solana';
-import type {
-  PurchasedPack,
-  GiftedPack,
-  OpenPackResult,
-  WalletAdapter,
-} from '@/lib/types';
+import type { PurchasedPack } from '@/lib/types';
 import { PACK_CONFIG } from '@/lib/types';
-import PackReveal from '@/app/components/PackReveal';
 
 export default function InventoryPage() {
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
 
-  const [tab, setTab] = React.useState<'collection' | 'purchased' | 'gifted'>(
+  const [tab, setTab] = React.useState<'collection' | 'purchased'>(
     'collection'
   );
   const [purchasedPacks, setPurchasedPacks] = React.useState<PurchasedPack[]>(
     []
   );
-  const [giftedPacks, setGiftedPacks] = React.useState<GiftedPack[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [revealResult, setRevealResult] =
-    React.useState<OpenPackResult | null>(null);
-  const [openingId, setOpeningId] = React.useState<string | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const [refreshKey, setRefreshKey] = React.useState(0);
+  const [refreshKey] = React.useState(0);
 
   React.useEffect(() => {
     if (!wallet?.address) return;
@@ -44,15 +33,9 @@ export default function InventoryPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [purchased, gifted] = await Promise.allSettled([
-          gachaApi.getPurchasedPacks(wallet.address),
-          gachaApi.getGifted(wallet.address),
-        ]);
+        const purchased = await gachaApi.getPurchasedPacks(wallet.address);
         if (!alive) return;
-        if (purchased.status === 'fulfilled')
-          setPurchasedPacks(purchased.value.packs ?? []);
-        if (gifted.status === 'fulfilled')
-          setGiftedPacks(gifted.value.packs ?? []);
+        setPurchasedPacks(purchased.packs ?? []);
       } catch {
         /* noop */
       } finally {
@@ -66,32 +49,9 @@ export default function InventoryPage() {
     };
   }, [wallet?.address, refreshKey]);
 
-  const openGiftedPack = async (pack: GiftedPack) => {
-    if (!wallet) return;
-    setError(null);
-    setOpeningId(pack.id);
-
-    const w = wallet as unknown as WalletAdapter;
-
-    try {
-      const { nonce, messageToSign } =
-        await gachaApi.generatePurchasedPack(w.address);
-      const signature = await signMessage(messageToSign, w);
-      await gachaApi.usePurchasedPack(w.address, signature, nonce);
-      const result = await gachaApi.openPack(nonce);
-      setRevealResult(result);
-      setRefreshKey((k) => k + 1);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to open pack');
-    } finally {
-      setOpeningId(null);
-    }
-  };
-
   const tabs = [
     { id: 'collection' as const, label: 'Collection' },
     { id: 'purchased' as const, label: 'Purchased Packs' },
-    { id: 'gifted' as const, label: 'Gifted Packs' },
   ];
 
   return (
@@ -128,12 +88,6 @@ export default function InventoryPage() {
                 </button>
               ))}
             </div>
-
-            {error && (
-              <div className="mb-4 p-3 rounded-lg border border-[var(--cb-error)]/30 bg-[var(--cb-error)]/10 text-sm text-[var(--cb-error)]">
-                {error}
-              </div>
-            )}
 
             {tab === 'collection' && (
               <NftGallery owner={wallet?.address} key={refreshKey} />
@@ -184,86 +138,11 @@ export default function InventoryPage() {
               </div>
             )}
 
-            {tab === 'gifted' && (
-              <div>
-                {loading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="spinner spinner-lg" />
-                  </div>
-                ) : giftedPacks.length === 0 ? (
-                  <div className="text-center py-12 text-[var(--cb-text-muted)]">
-                    <p className="text-lg font-semibold">No gifted packs</p>
-                    <p className="text-sm mt-1">
-                      Gifted packs from other users will appear here.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {giftedPacks.map((pack) => (
-                      <div
-                        key={pack.id}
-                        className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-4 space-y-3"
-                      >
-                        <div className="text-xs text-[var(--cb-text-muted)]">
-                          From {pack.sender.slice(0, 4)}...
-                          {pack.sender.slice(-4)}
-                        </div>
-                        <div className="text-sm font-semibold">
-                          {PACK_CONFIG[pack.packType]?.label ?? 'Pack'}
-                        </div>
-                        {pack.status === 'pending' && (
-                          <button
-                            onClick={() => openGiftedPack(pack)}
-                            disabled={openingId === pack.id}
-                            className="w-full py-2 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] text-sm font-bold disabled:opacity-50 transition-colors"
-                          >
-                            {openingId === pack.id ? (
-                              <span className="flex items-center justify-center gap-2">
-                                <span className="spinner" style={{ width: 14, height: 14, borderWidth: 2 }} />
-                                Opening...
-                              </span>
-                            ) : (
-                              'Open Pack'
-                            )}
-                          </button>
-                        )}
-                        {pack.status !== 'pending' && (
-                          <div className="text-xs text-[var(--cb-success)]">
-                            Opened
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
           </>
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-[var(--cb-border)] bg-[var(--cb-surface)]/50 py-6 mt-auto">
-        <div className="max-w-[1400px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--cb-text-muted)]">
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cb-bug-yellow.png" alt="" className="w-5 h-5" />
-            <span>&copy; {new Date().getFullYear()} ComicBook.com</span>
-          </div>
-          <span>Powered by CollectorCrypt</span>
-        </div>
-      </footer>
-
-      {revealResult && (
-        <PackReveal
-          results={[revealResult]}
-          onClose={() => {
-            setRevealResult(null);
-            setRefreshKey((k) => k + 1);
-          }}
-          onBuybackComplete={() => setRefreshKey((k) => k + 1)}
-        />
-      )}
+      <Footer />
     </div>
   );
 }

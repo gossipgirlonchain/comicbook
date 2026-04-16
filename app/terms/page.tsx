@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import Header from '@/app/components/Header';
+import Footer from '@/app/components/Footer';
 
 export const metadata = {
   title: 'Terms & Conditions - ComicBook.com Gacha',
@@ -131,21 +131,10 @@ export default function TermsPage() {
         </article>
       </main>
 
-      <footer className="border-t border-[var(--cb-border)] bg-[var(--cb-surface)]/50 py-6 mt-12">
-        <div className="max-w-[1400px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--cb-text-muted)]">
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cb-bug-yellow.png" alt="" className="w-5 h-5" />
-            <span>&copy; {new Date().getFullYear()} ComicBook.com</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/how-it-works" className="hover:text-[var(--cb-text)] transition-colors">
-              How It Works
-            </Link>
-            <span>Powered by CollectorCrypt</span>
-          </div>
-        </div>
-      </footer>
+      <Footer
+        marginTop="mt-12"
+        links={[{ href: '/how-it-works', label: 'How It Works' }]}
+      />
     </div>
   );
 }

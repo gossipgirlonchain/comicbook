@@ -4,6 +4,7 @@ import * as React from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import Header from '@/app/components/Header';
+import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import ProfileIdentity from '@/app/components/ProfileIdentity';
 import { gachaApi } from '@/lib/api';
@@ -147,7 +148,7 @@ export default function ProfilePage() {
               <StatCard label="Balance" value={usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '-'} color="text-[var(--cb-success)]" loading={loading} />
               <StatCard label="Total Points" value={totalPoints.toLocaleString()} color="text-[var(--cb-accent)]" loading={loading} />
               <StatCard label="NFTs Owned" value={String(myCollection.length)} color="text-[var(--cb-text)]" loading={loading} />
-              <StatCard label="Packs Opened" value={String(myWins.length)} color="text-[var(--cb-text)]" loading={loading} />
+              <StatCard label="Machine Pulls" value={String(myWins.length)} color="text-[var(--cb-text)]" loading={loading} />
             </div>
 
             {/* Collection breakdown + Recent wins */}
@@ -292,16 +293,7 @@ export default function ProfilePage() {
         )}
       </main>
 
-      <footer className="border-t border-[var(--cb-border)] bg-[var(--cb-surface)]/50 py-6 mt-auto">
-        <div className="max-w-[1400px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--cb-text-muted)]">
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cb-bug-yellow.png" alt="" className="w-5 h-5" />
-            <span>&copy; {new Date().getFullYear()} ComicBook.com</span>
-          </div>
-          <span>Powered by CollectorCrypt</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

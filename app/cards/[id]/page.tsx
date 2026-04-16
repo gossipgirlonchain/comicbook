@@ -4,6 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Header from '@/app/components/Header';
+import Footer from '@/app/components/Footer';
 import { gachaApi } from '@/lib/api';
 import { getNftImageUrl } from '@/lib/solana';
 import type { NftWon } from '@/lib/types';
@@ -200,16 +201,7 @@ export default function CardDetailPage() {
         </div>
       </main>
 
-      <footer className="border-t border-[var(--cb-border)] bg-[var(--cb-surface)]/50 py-6 mt-auto">
-        <div className="max-w-[1400px] mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[var(--cb-text-muted)]">
-          <div className="flex items-center gap-2">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/cb-bug-yellow.png" alt="" className="w-5 h-5" />
-            <span>&copy; {new Date().getFullYear()} ComicBook.com</span>
-          </div>
-          <span>Powered by CollectorCrypt</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

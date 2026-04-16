@@ -181,7 +181,6 @@ export default function VendingMachine({ onResult }: Props) {
   };
 
   const price = PACK_CONFIG[selectedPack].price * yoloCount;
-  const cfg = PACK_CONFIG[selectedPack];
 
   return (
     <div className={`rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] overflow-hidden ${shaking ? 'machine-shake' : ''}`}>
@@ -232,21 +231,6 @@ export default function VendingMachine({ onResult }: Props) {
               }
             )}
           </div>
-        </div>
-
-        {/* Pack info */}
-        <div className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-bg)] p-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] bg-[var(--cb-success)]/20 text-[var(--cb-success)] px-2 py-0.5 rounded-full font-bold uppercase">
-              Guaranteed Authenticity
-            </span>
-          </div>
-          <h3 className="text-base font-bold mt-2">
-            {cfg.label}
-          </h3>
-          <p className="text-2xl font-bold text-[var(--cb-accent)] mt-1">
-            ${cfg.price}.00
-          </p>
         </div>
 
         {/* YOLO count - capped segmented selector */}
