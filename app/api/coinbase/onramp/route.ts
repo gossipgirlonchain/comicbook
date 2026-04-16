@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   try {
     if (!CDP_API_KEY_ID || !CDP_API_KEY_SECRET) {
       return NextResponse.json(
-        { error: 'Coinbase CDP not configured' },
+        { error: 'Card payments are not available right now. Please try again later.' },
         { status: 503 }
       );
     }

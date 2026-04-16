@@ -11,16 +11,8 @@ export default function DepositPage() {
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
 
-  const [copied, setCopied] = React.useState(false);
   const [buyLoading, setBuyLoading] = React.useState(false);
   const [buyError, setBuyError] = React.useState<string | null>(null);
-
-  const copyAddress = async () => {
-    if (!wallet?.address) return;
-    await navigator.clipboard.writeText(wallet.address);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   const openCoinbaseOnramp = async () => {
     if (!wallet?.address) return;
@@ -86,7 +78,7 @@ export default function DepositPage() {
                 <div>
                   <h2 className="text-base font-bold">Buy with Card</h2>
                   <p className="text-xs text-[var(--cb-text-muted)]">
-                    No ID required under $500/week
+                    Apple Pay, Google Pay, or debit card
                   </p>
                 </div>
               </div>
@@ -111,47 +103,9 @@ export default function DepositPage() {
               )}
 
               <p className="text-[10px] text-[var(--cb-text-muted)] text-center">
-                Apple Pay, Google Pay, or debit card. Funds arrive in seconds.
+                Funds arrive in seconds.
               </p>
             </div>
-
-            {/* Advanced transfer */}
-            <details className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5">
-              <summary className="cursor-pointer text-sm font-semibold text-[var(--cb-text-muted)] hover:text-[var(--cb-text)] transition-colors">
-                Advanced: Transfer from external wallet
-              </summary>
-              <div className="mt-4 space-y-3">
-                <p className="text-xs text-[var(--cb-text-muted)]">
-                  For advanced users. Send USDC or SOL on the Solana network
-                  to your deposit address below.
-                </p>
-                <div className="rounded-xl bg-[var(--cb-bg)] border border-[var(--cb-border)] p-3">
-                  <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider mb-1.5">
-                    Deposit Address
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 text-xs font-mono text-[var(--cb-text)] truncate">
-                      {wallet?.address || '...'}
-                    </code>
-                    <button
-                      onClick={copyAddress}
-                      className="px-3 py-1.5 rounded-lg border border-[var(--cb-border)] bg-[var(--cb-surface)] text-xs font-semibold text-[var(--cb-text)] hover:bg-[var(--cb-surface-hover)] transition-colors flex-shrink-0"
-                    >
-                      {copied ? 'Copied!' : 'Copy'}
-                    </button>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 p-3 rounded-xl bg-[var(--cb-warning)]/10 border border-[var(--cb-warning)]/20">
-                  <svg className="w-4 h-4 text-[var(--cb-warning)] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.54 20h18.92a1 1 0 00.85-1.28l-8.6-14.86a1 1 0 00-1.72 0z" />
-                  </svg>
-                  <p className="text-xs text-[var(--cb-text-muted)]">
-                    Only send USDC or SOL on the Solana network. Other tokens or
-                    wrong networks will result in lost funds.
-                  </p>
-                </div>
-              </div>
-            </details>
 
             {/* Test mode faucet */}
             {process.env.NEXT_PUBLIC_SOLANA_NETWORK !== 'mainnet-beta' && (
