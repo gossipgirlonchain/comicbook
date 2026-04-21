@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { useWallets } from '@privy-io/react-auth/solana';
 import { usePrivy } from '@privy-io/react-auth';
 import { gachaApi, ApiError } from '@/lib/api';
@@ -40,6 +41,7 @@ export default function VendingMachine({ onResult }: Props) {
   const [shaking, setShaking] = React.useState(false);
   const [winners, setWinners] = React.useState<Winner[]>([]);
   const [balance, setBalance] = React.useState<number | null>(null);
+  const [showInsufficientFunds, setShowInsufficientFunds] = React.useState(false);
 
   const isYolo = yoloCount > 1;
   const isRunning = status?.machineStatus === 'running';
@@ -101,8 +103,7 @@ export default function VendingMachine({ onResult }: Props) {
   const handlePurchase = async () => {
     if (!wallet) return;
     if (balance !== null && balance < price) {
-      setError(`Insufficient balance. You need $${price} but have $${balance.toFixed(2)}. Add funds to continue.`);
-      setPhase('error');
+      setShowInsufficientFunds(true);
       return;
     }
     setError(null);
@@ -184,17 +185,7 @@ export default function VendingMachine({ onResult }: Props) {
 
   return (
     <div className={`rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] overflow-hidden ${shaking ? 'machine-shake' : ''}`}>
-      {/* Status indicator */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-[var(--cb-border)] bg-[var(--cb-primary)]/20">
-        <div className="flex items-center gap-2">
-          <span className={`inline-block w-2 h-2 rounded-full ${isRunning ? 'bg-[var(--cb-success)] pulse-dot' : status?.machineStatus === 'stopped' ? 'bg-[var(--cb-error)]' : 'bg-[var(--cb-warning)]'}`} />
-          <span className="text-[11px] font-medium text-[var(--cb-text-muted)] uppercase tracking-wider">
-            {isRunning ? 'Online' : status?.machineStatus === 'stopped' ? 'Maintenance' : status ? 'Offline' : 'Loading...'}
-          </span>
-        </div>
-      </div>
-
-      {/* Maintenance banner */}
+      {/* Maintenance banner — only renders when machine is not running */}
       {status?.machineStatus === 'stopped' && (
         <div className="px-4 py-2.5 bg-[var(--cb-error)]/10 border-b border-[var(--cb-error)]/30 text-center">
           <p className="text-sm text-[var(--cb-error)] font-medium">
@@ -392,6 +383,88 @@ export default function VendingMachine({ onResult }: Props) {
               })}
             </div>
           )}
+        </div>
+      </div>
+
+      {showInsufficientFunds && (
+        <InsufficientFundsModal
+          needed={price}
+          balance={balance ?? 0}
+          onClose={() => setShowInsufficientFunds(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function InsufficientFundsModal({
+  needed,
+  balance,
+  onClose,
+}: {
+  needed: number;
+  balance: number;
+  onClose: () => void;
+}) {
+  const shortfall = Math.max(0, needed - balance);
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center p-4 overlay-enter"
+      style={{ background: 'rgba(8, 13, 26, 0.92)' }}
+      onClick={onClose}
+    >
+      <div
+        className="relative max-w-sm w-full rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-6 space-y-4 reveal-enter"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 rounded-full bg-[var(--cb-warning)]/15 text-[var(--cb-warning)] flex items-center justify-center flex-shrink-0">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01M10.29 3.86l-8.6 14.86A1 1 0 002.54 20h18.92a1 1 0 00.85-1.28l-8.6-14.86a1 1 0 00-1.72 0z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-base font-bold">Not enough funds</h3>
+            <p className="text-xs text-[var(--cb-text-muted)] mt-1">
+              Add funds to pull the machine.
+            </p>
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-bg)] p-3 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--cb-text-muted)]">Pull cost</span>
+            <span className="font-semibold tabular-nums">${needed.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-[var(--cb-text-muted)]">Your balance</span>
+            <span className="font-semibold tabular-nums">${balance.toFixed(2)}</span>
+          </div>
+          <div className="h-px bg-[var(--cb-border)]" />
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--cb-text-muted)]">
+              Short by
+            </span>
+            <span className="text-xl font-bold text-[var(--cb-warning)] tabular-nums">
+              ${shortfall.toFixed(2)}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-1">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg border border-[var(--cb-border)] text-sm font-semibold text-[var(--cb-text-muted)] hover:text-[var(--cb-text)] hover:bg-[var(--cb-surface-hover)] transition-colors"
+          >
+            Cancel
+          </button>
+          <Link
+            href="/deposit"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] text-sm font-bold transition-colors text-center"
+          >
+            Add Funds
+          </Link>
         </div>
       </div>
     </div>
