@@ -17,7 +17,7 @@ function PrivyWrapper({ children }: { children: React.ReactNode }) {
       appId={appId}
       clientId={clientId}
       config={{
-        loginMethods: ['google', 'wallet', 'email'],
+        loginMethods: ['google', 'email'],
         appearance: {
           walletChainType: 'ethereum-and-solana',
           theme: theme,

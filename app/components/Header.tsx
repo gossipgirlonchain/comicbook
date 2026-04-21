@@ -25,14 +25,14 @@ export default function Header() {
 
   return (
     <header className="border-b border-[var(--cb-border)] bg-[var(--cb-primary)] sticky top-0 z-40">
-      <div className="max-w-[1400px] mx-auto px-4 py-3 flex items-center justify-between">
+      <div className="max-w-[1400px] mx-auto px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <Link href="/" className="flex-shrink-0">
+          <Link href="/" className="flex-shrink-0 py-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/cb-logo-white.png"
               alt="ComicBook.com"
-              className="h-10 w-auto"
+              className="h-14 w-auto"
             />
           </Link>
           <nav className="hidden sm:flex items-center gap-1">

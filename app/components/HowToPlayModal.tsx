@@ -60,7 +60,7 @@ export default function HowToPlayModal() {
           <div>
             <h2 className="text-xl font-bold">How to Play</h2>
             <p className="text-xs text-[var(--cb-text-muted)]">
-              Welcome to the ComicBook.com Gacha Machine
+              Welcome to the ComicBook.com Vending Machine
             </p>
           </div>
         </div>

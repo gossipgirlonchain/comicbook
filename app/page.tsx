@@ -68,7 +68,7 @@ export default function Home() {
           {/* LEFT: Card grid */}
           <div className="flex-1 min-w-0">
             <h2 className="text-lg font-bold mb-4 text-[var(--cb-text)]">
-              Loaded in the Gacha Machine
+              Loaded in the Vending Machine
             </h2>
 
             {cardsLoading ? (
