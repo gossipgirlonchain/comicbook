@@ -207,7 +207,7 @@ export default function VendingMachine({ onResult }: Props) {
         {/* Pack type selector — three tiers */}
         <div>
           <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
-            Pack Tier
+            Pull Tier
           </label>
           <div className="grid grid-cols-3 gap-2">
             {(Object.entries(PACK_CONFIG) as [PackType, typeof PACK_CONFIG[PackType]][]).map(
@@ -236,7 +236,7 @@ export default function VendingMachine({ onResult }: Props) {
         {/* YOLO count - capped segmented selector */}
         <div>
           <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
-            Open how many?
+            How many pulls?
           </label>
           <div className="grid grid-cols-5 gap-1.5">
             {YOLO_COUNTS.map((count) => {
@@ -282,10 +282,10 @@ export default function VendingMachine({ onResult }: Props) {
               {phaseLabel[phase]}
             </span>
           ) : !authenticated ? (
-            'Sign In to Open'
+            'Sign In to Pull'
           ) : (
             <>
-              {isYolo ? `Open ${yoloCount} Packs - $${price}` : `Open Pack - $${price}`}
+              {isYolo ? `Pull Machine ${yoloCount}× - $${price}` : `Pull Machine - $${price}`}
             </>
           )}
         </button>

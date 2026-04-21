@@ -115,8 +115,8 @@ export default function NftGallery({ owner }: { owner?: string }) {
   if (!cards.length) {
     return (
       <div className="text-center py-12 text-[var(--cb-text-muted)]">
-        <p className="text-lg font-semibold">No NFTs yet</p>
-        <p className="text-sm mt-1">Open a pack to start your collection.</p>
+        <p className="text-lg font-semibold">No collectibles yet</p>
+        <p className="text-sm mt-1">Pull the machine to start your collection.</p>
       </div>
     );
   }

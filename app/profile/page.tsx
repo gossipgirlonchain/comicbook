@@ -14,12 +14,6 @@ import { RARITY_COLORS, type Rarity } from '@/lib/types';
 import { readProfile, type UserProfile } from '@/lib/profile-storage';
 import { winnersToCollection, type OwnedCard } from '@/lib/collection';
 
-type LeaderboardEntry = {
-  playerAddress: string;
-  points: number;
-  totalPoints?: number;
-};
-
 export default function ProfilePage() {
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
@@ -88,10 +82,6 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [winners, wallet?.address, soldKey]);
 
-  const totalPoints = React.useMemo(() => {
-    return myWins.reduce((sum, w) => sum + (w.points || 0), 0);
-  }, [myWins]);
-
   const rarityCounts = React.useMemo(() => {
     const counts: Record<string, number> = {
       Legendary: 0, Epic: 0, Rare: 0, Uncommon: 0, Common: 0,
@@ -101,23 +91,6 @@ export default function ProfilePage() {
     });
     return counts;
   }, [myCollection]);
-
-  const leaderboard = React.useMemo((): LeaderboardEntry[] => {
-    const map = new Map<string, number>();
-    winners.forEach((w) => {
-      map.set(w.playerAddress, (map.get(w.playerAddress) || 0) + (w.points || 0));
-    });
-    return Array.from(map.entries())
-      .map(([playerAddress, points]) => ({ playerAddress, points }))
-      .sort((a, b) => b.points - a.points)
-      .slice(0, 25);
-  }, [winners]);
-
-  const myRank = React.useMemo(() => {
-    if (!wallet?.address) return null;
-    const idx = leaderboard.findIndex((e) => e.playerAddress === wallet.address);
-    return idx >= 0 ? idx + 1 : null;
-  }, [leaderboard, wallet?.address]);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -140,14 +113,12 @@ export default function ProfilePage() {
               address={wallet?.address}
               profile={profile}
               onProfileChange={setProfile}
-              rank={myRank}
             />
 
             {/* Stats row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <StatCard label="Balance" value={usdcBalance !== null ? `$${usdcBalance.toFixed(2)}` : '-'} color="text-[var(--cb-success)]" loading={loading} />
-              <StatCard label="Total Points" value={totalPoints.toLocaleString()} color="text-[var(--cb-accent)]" loading={loading} />
-              <StatCard label="NFTs Owned" value={String(myCollection.length)} color="text-[var(--cb-text)]" loading={loading} />
+              <StatCard label="Collectibles" value={String(myCollection.length)} color="text-[var(--cb-text)]" loading={loading} />
               <StatCard label="Machine Pulls" value={String(myWins.length)} color="text-[var(--cb-text)]" loading={loading} />
             </div>
 
@@ -165,7 +136,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 ) : myCollection.length === 0 ? (
-                  <p className="text-sm text-[var(--cb-text-muted)]">No NFTs in collection yet.</p>
+                  <p className="text-sm text-[var(--cb-text-muted)]">No collectibles yet.</p>
                 ) : (
                   <div className="space-y-2">
                     {(['Legendary', 'Epic', 'Rare', 'Uncommon', 'Common'] as Rarity[]).map((rarity) => {
@@ -194,10 +165,10 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Recent wins */}
+              {/* Recent pulls */}
               <div className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5">
                 <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--cb-text-muted)] mb-4">
-                  Your Recent Wins
+                  Your Recent Pulls
                 </h2>
                 {loading ? (
                   <div className="space-y-3">
@@ -206,7 +177,7 @@ export default function ProfilePage() {
                     ))}
                   </div>
                 ) : myWins.length === 0 ? (
-                  <p className="text-sm text-[var(--cb-text-muted)]">No wins yet. Open a pack to get started!</p>
+                  <p className="text-sm text-[var(--cb-text-muted)]">No pulls yet. Pull the machine to get started!</p>
                 ) : (
                   <div className="space-y-2 max-h-[360px] overflow-y-auto">
                     {myWins.slice(0, 20).map((win, i) => {
@@ -219,14 +190,9 @@ export default function ProfilePage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold truncate">{win.nftWon.content.metadata.name}</p>
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[9px] font-bold px-1 py-px rounded ${colors.bg} ${colors.text}`}>
-                                {win.rarity}
-                              </span>
-                              <span className="text-[10px] text-[var(--cb-accent)] font-bold">
-                                +{win.points} pts
-                              </span>
-                            </div>
+                            <span className={`inline-block text-[9px] font-bold px-1 py-px rounded ${colors.bg} ${colors.text} mt-0.5`}>
+                              {win.rarity}
+                            </span>
                           </div>
                         </div>
                       );
@@ -236,59 +202,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Leaderboard */}
-            <div className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-[var(--cb-text-muted)] mb-4">
-                Leaderboard
-              </h2>
-              {winners.length === 0 ? (
-                <p className="text-sm text-[var(--cb-text-muted)]">Loading leaderboard...</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-[var(--cb-text-muted)] text-xs uppercase tracking-wider border-b border-[var(--cb-border)]">
-                        <th className="pb-3 pr-4 w-12">Rank</th>
-                        <th className="pb-3 pr-4">Wallet</th>
-                        <th className="pb-3 text-right">Points</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {leaderboard.map((entry, i) => {
-                        const isMe = wallet?.address === entry.playerAddress;
-                        return (
-                          <tr
-                            key={entry.playerAddress}
-                            className={`border-b border-[var(--cb-border)]/50 ${isMe ? 'bg-[var(--cb-accent)]/5' : ''}`}
-                          >
-                            <td className="py-3 pr-4">
-                              <span className={`font-bold ${i < 3 ? 'text-[var(--cb-accent)]' : 'text-[var(--cb-text-muted)]'}`}>
-                                {i + 1}
-                              </span>
-                            </td>
-                            <td className="py-3 pr-4">
-                              <span className={`text-xs ${isMe ? 'text-[var(--cb-accent)] font-bold' : 'text-[var(--cb-text)]'}`}>
-                                {isMe && profile.username ? (
-                                  <span className="font-semibold">{profile.username}</span>
-                                ) : (
-                                  <span className="font-mono">
-                                    {entry.playerAddress.slice(0, 6)}...{entry.playerAddress.slice(-6)}
-                                  </span>
-                                )}
-                                {isMe && <span className="ml-2 text-[10px] text-[var(--cb-accent)]">(you)</span>}
-                              </span>
-                            </td>
-                            <td className="py-3 text-right">
-                              <span className="font-bold tabular-nums">{entry.points.toLocaleString()}</span>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </main>

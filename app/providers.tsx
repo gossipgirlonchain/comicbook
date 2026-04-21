@@ -17,6 +17,11 @@ function PrivyWrapper({ children }: { children: React.ReactNode }) {
       appId={appId}
       clientId={clientId}
       config={{
+        // NOTE: Privy does not currently support Facebook as a native login
+        // method (supported list: google, twitter, discord, github, linkedin,
+        // spotify, instagram, tiktok, apple, farcaster, telegram, ...).
+        // Flagged for Andrew — can swap in Apple / Twitter / Instagram if he
+        // wants broader coverage. For now: google + email only.
         loginMethods: ['google', 'email'],
         appearance: {
           walletChainType: 'ethereum-and-solana',

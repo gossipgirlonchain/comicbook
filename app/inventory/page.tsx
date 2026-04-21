@@ -51,7 +51,7 @@ export default function InventoryPage() {
 
   const tabs = [
     { id: 'collection' as const, label: 'Collection' },
-    { id: 'purchased' as const, label: 'Purchased Packs' },
+    { id: 'purchased' as const, label: 'Machine Pulls' },
   ];
 
   return (
@@ -101,10 +101,10 @@ export default function InventoryPage() {
                   </div>
                 ) : purchasedPacks.length === 0 ? (
                   <div className="text-center py-12 text-[var(--cb-text-muted)]">
-                    <p className="text-lg font-semibold">No purchased packs</p>
+                    <p className="text-lg font-semibold">No machine pulls yet</p>
                     <p className="text-sm mt-1">
                       <Link href="/" className="text-[var(--cb-accent)] hover:underline">
-                        Open the vending machine
+                        Pull the machine
                       </Link>{' '}
                       to get started.
                     </p>

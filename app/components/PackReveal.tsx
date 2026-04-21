@@ -184,11 +184,6 @@ export default function PackReveal({
                       value={getGrade(current)}
                       color="text-[var(--cb-accent)]"
                     />
-                    <ValuePill
-                      label="Points"
-                      value={String(current.points)}
-                      color="text-[var(--rarity-legendary)]"
-                    />
                   </div>
 
                   <div className="flex gap-2 pt-1">
@@ -456,8 +451,6 @@ function SummaryGrid({
   onClose: () => void;
   onBuybackComplete?: () => void;
 }) {
-  const totalPoints = results.reduce((s, r) => s + r.points, 0);
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overlay-enter overflow-y-auto"
@@ -466,9 +459,9 @@ function SummaryGrid({
       <div className="relative max-w-4xl w-full mx-4 my-8 bg-[var(--cb-surface)] rounded-2xl border border-[var(--cb-border)] overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--cb-border)] bg-[var(--cb-primary)]/20">
           <div>
-            <h2 className="text-xl font-bold">YOLO Results</h2>
+            <h2 className="text-xl font-bold">Your Pulls</h2>
             <p className="text-sm text-[var(--cb-text-muted)]">
-              {results.length} packs opened &middot; {totalPoints} total points
+              {results.length} {results.length === 1 ? 'pull' : 'pulls'}
             </p>
           </div>
           <button

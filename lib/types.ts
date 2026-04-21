@@ -155,8 +155,8 @@ export const PACK_CONFIG = {
   pokemon_250: { label: 'Legendary Pack', price: 250, slug: 'legendary' },
 } as const;
 
-// Capped YOLO multi-open counts. Single open is 1. Multi-open is one of these.
-export const YOLO_COUNTS = [1, 3, 5, 10, 20] as const;
+// Capped multi-pull counts. Single pull is 1. Multi-pull is one of these.
+export const YOLO_COUNTS = [1, 2, 5, 10, 20] as const;
 
 export const RARITY_COLORS: Record<Rarity, { bg: string; text: string; border: string; glow: string }> = {
   Common: { bg: 'bg-gray-700', text: 'text-gray-200', border: 'border-gray-500', glow: 'shadow-gray-500/30' },

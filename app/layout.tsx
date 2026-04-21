@@ -14,9 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ComicBook.com - Vending Machine",
+  title: "ComicBook.com Machine",
   description:
-    "Mystery NFT packs - connect your wallet, pull the lever, reveal your wins.",
+    "Real graded collectibles. Pull the machine, see what you got, keep it or sell it back.",
   icons: {
     icon: "/cb-bug-yellow.png",
     apple: "/cb-bug-yellow.png",

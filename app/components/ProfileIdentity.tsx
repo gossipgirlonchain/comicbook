@@ -12,14 +12,12 @@ type Props = {
   address?: string;
   profile: UserProfile;
   onProfileChange: (next: UserProfile) => void;
-  rank: number | null;
 };
 
 export default function ProfileIdentity({
   address,
   profile,
   onProfileChange,
-  rank,
 }: Props) {
   const [editing, setEditing] = React.useState(false);
   const [draftUsername, setDraftUsername] = React.useState(
@@ -184,18 +182,8 @@ export default function ProfileIdentity({
           )}
         </div>
 
-        {/* Actions + rank */}
+        {/* Actions */}
         <div className="flex items-center gap-3">
-          {rank && !editing && (
-            <div className="text-right">
-              <span className="text-xs text-[var(--cb-text-muted)] uppercase tracking-wider">
-                Rank
-              </span>
-              <p className="text-2xl font-bold text-[var(--cb-accent)]">
-                #{rank}
-              </p>
-            </div>
-          )}
           {editing ? (
             <div className="flex gap-2">
               <button

@@ -60,7 +60,7 @@ export default function HowToPlayModal() {
           <div>
             <h2 className="text-xl font-bold">How to Play</h2>
             <p className="text-xs text-[var(--cb-text-muted)]">
-              Welcome to the ComicBook.com Vending Machine
+              Welcome to the ComicBook.com Machine
             </p>
           </div>
         </div>
@@ -74,17 +74,17 @@ export default function HowToPlayModal() {
           <Step
             n={2}
             title="Pick a tier"
-            body="Choose $25, $50, or $150 packs. Higher tiers contain higher-value cards."
+            body="Choose $25, $50, or $250 tiers. Higher tiers contain higher-value cards."
           />
           <Step
             n={3}
-            title="Open your pack"
-            body="Open 1, 3, 5, 10, or 20 packs at once. Every card is a real, graded collectible."
+            title="Pull the machine"
+            body="Pull 1, 2, 5, 10, or 20 times at once. Every card is a real, graded collectible."
           />
           <Step
             n={4}
             title="Keep or cash out"
-            body="Keep cards in your collection or sell them back to the house for 85% of their insured value — instantly."
+            body="Keep it in your collection or sell it back to the house for 85% of its insured value — instantly."
           />
         </ol>
 
