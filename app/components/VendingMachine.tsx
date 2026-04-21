@@ -194,19 +194,19 @@ export default function VendingMachine({ onResult }: Props) {
         </div>
       )}
 
-      <div className="p-4 space-y-4">
-        {/* Loop the machine reveal clip above the tier selector */}
-        <div className="rounded-xl overflow-hidden bg-[var(--cb-bg)] border border-[var(--cb-border)]">
-          <video
-            src="/gacha-video.mp4"
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-auto block"
-          />
-        </div>
+      {/* Machine video — full-bleed: touches the top/left/right of the
+          card. The outer rounded-2xl + overflow-hidden clips the top
+          corners for us. */}
+      <video
+        src="/gacha-video.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="w-full h-auto block"
+      />
 
+      <div className="p-4 space-y-4">
         {/* Pack type selector — three tiers */}
         <div>
           <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
