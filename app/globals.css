@@ -9,12 +9,14 @@
 }
 
 :root {
-  /* ComicBook.com brand palette */
-  --cb-primary: #22386f;
+  /* ComicBook.com brand palette
+     Navbar uses ComicBook.com's navbar navy (#01154d). Body uses the mid
+     navy that was previously the navbar color, per Andrew's Final Changes. */
+  --cb-primary: #01154d;
   --cb-secondary: #ffb91d;
 
-  /* Dark theme derived from brand navy */
-  --cb-bg: #080d1a;
+  /* Dark theme — body is now ComicBook.com mid-navy */
+  --cb-bg: #22386f;
   --cb-surface: #0f1628;
   --cb-surface-hover: #162040;
   --cb-border: #1e2d52;
