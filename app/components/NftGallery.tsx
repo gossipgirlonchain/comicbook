@@ -80,7 +80,7 @@ export default function NftGallery({ owner }: { owner?: string }) {
         }
       } catch (e) {
         if (alive)
-          setError(e instanceof Error ? e.message : 'Failed to load NFTs');
+          setError(e instanceof Error ? e.message : 'Failed to load collectibles');
       } finally {
         if (alive) setLoading(false);
       }
