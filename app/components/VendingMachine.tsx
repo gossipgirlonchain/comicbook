@@ -204,6 +204,18 @@ export default function VendingMachine({ onResult }: Props) {
       )}
 
       <div className="p-4 space-y-4">
+        {/* Loop the machine reveal clip above the tier selector */}
+        <div className="rounded-xl overflow-hidden bg-[var(--cb-bg)] border border-[var(--cb-border)]">
+          <video
+            src="/gacha-video.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-auto block"
+          />
+        </div>
+
         {/* Pack type selector — three tiers */}
         <div>
           <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] mb-1.5 uppercase tracking-wider">
@@ -284,9 +296,7 @@ export default function VendingMachine({ onResult }: Props) {
           ) : !authenticated ? (
             'Sign In to Pull'
           ) : (
-            <>
-              {isYolo ? `Pull Machine ${yoloCount}× - $${price}` : `Pull Machine - $${price}`}
-            </>
+            <>{isYolo ? `Pull Machine ${yoloCount}×` : 'Pull Machine'}</>
           )}
         </button>
 
