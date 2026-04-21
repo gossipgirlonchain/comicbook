@@ -72,7 +72,7 @@ export default function PackReveal({
       >
         <video
           ref={videoRef}
-          src="/gacha-video.webm"
+          src="/gacha-video.mp4"
           autoPlay
           muted
           playsInline
