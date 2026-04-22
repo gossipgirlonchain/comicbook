@@ -9,6 +9,8 @@ import type {
   BuybackResponse,
   BuybackCheckResult,
   Winner,
+  NftWon,
+  Rarity,
   PurchasedPack,
   GiftedPack,
   Nft,
@@ -53,6 +55,53 @@ async function fetchJson<T>(
     throw new ApiError(res.status, data);
   }
   return data as T;
+}
+
+// Derived from the rarity bands shown in VendingMachine's odds table.
+// CC's winners feed has no explicit rarity field, so we bucket by
+// insuredValue. $1000+ gets Legendary since the UI supports it even though
+// the odds table tops out at Epic.
+function insuredValueToRarity(value: number): Rarity {
+  if (value >= 1000) return 'Legendary';
+  if (value >= 250) return 'Epic';
+  if (value >= 110) return 'Rare';
+  if (value >= 60) return 'Uncommon';
+  return 'Common';
+}
+
+function buildNftWon(
+  raw: { nft_address: string; nft?: { name?: string; uri?: string } | null },
+  rich: Nft | undefined
+): NftWon {
+  if (rich) {
+    const md = rich.content?.metadata;
+    return {
+      id: rich.id,
+      content: {
+        files: rich.content?.files ?? [],
+        links: {
+          image: rich.content?.links?.image ?? '',
+          external_url: rich.content?.links?.external_url,
+        },
+        metadata: {
+          name: md?.name ?? raw.nft?.name ?? 'Unknown',
+          description: md?.description,
+          attributes: md?.attributes ?? [],
+        },
+      },
+    };
+  }
+  return {
+    id: raw.nft_address,
+    content: {
+      files: raw.nft?.uri ? [{ uri: raw.nft.uri }] : [],
+      links: { image: '' },
+      metadata: {
+        name: raw.nft?.name ?? 'Unknown',
+        attributes: [],
+      },
+    },
+  };
 }
 
 function post<T>(path: string, body: unknown): Promise<T> {
@@ -154,7 +203,61 @@ export const gachaApi = {
 
   pollBuybackCheck: (memo: string) => pollBuybackCheck(memo),
 
-  getAllWinners: () => get<{ winners: Winner[] }>('getAllWinners'),
+  getAllWinners: async (): Promise<{ winners: Winner[] }> => {
+    // CC's /getAllWinners returns { success, data: RawWinner[] } where each
+    // RawWinner has { winner, nft_address, nft: {address,name,uri,...},
+    // insuredValue, created_at, memo_slug, pack_type, prize_tier }.
+    // Our UI expects the rich NftWon shape (content.files/links/metadata
+    // with attributes). We join against /getNfts (the house inventory pool —
+    // newly-won cards still live there since CC doesn't transfer on win) to
+    // pull in the enriched metadata that the winners feed omits.
+    type RawWinner = {
+      winner: string;
+      nft_address: string;
+      nft?: { name?: string; uri?: string } | null;
+      insuredValue?: number | string;
+      created_at: string;
+      memo_slug?: string;
+      pack_type?: string;
+      prize_tier?: number;
+    };
+
+    const [winnersRes, nftsRes] = await Promise.all([
+      fetchJson<{ success?: boolean; data?: RawWinner[]; winners?: Winner[] }>('getAllWinners'),
+      fetchJson<{ nfts?: Nft[] }>('getNfts').catch(() => ({ nfts: [] as Nft[] })),
+    ]);
+
+    // Defensive: if CC ever flips to returning the shape our client originally
+    // expected (`{ winners: Winner[] }`), pass it through untouched.
+    if (Array.isArray(winnersRes.winners)) {
+      return { winners: winnersRes.winners };
+    }
+
+    const nftMap = new Map<string, Nft>();
+    for (const n of nftsRes.nfts ?? []) nftMap.set(n.id, n);
+
+    const winners: Winner[] = (winnersRes.data ?? []).map((r) => {
+      const rich = nftMap.get(r.nft_address);
+      const insured = Number(
+        r.insuredValue ??
+          rich?.content?.metadata?.attributes?.find(
+            (a) => a.trait_type === 'Insured Value'
+          )?.value ??
+          0
+      );
+      return {
+        playerAddress: r.winner,
+        nft_address: r.nft_address,
+        timestamp: r.created_at,
+        transactionSignature: r.memo_slug ?? '',
+        points: 0,
+        rarity: insuredValueToRarity(insured),
+        nftWon: buildNftWon(r, rich),
+      };
+    });
+
+    return { winners };
+  },
 
   getPurchasedPacks: (wallet: string) =>
     get<{ packs: PurchasedPack[] }>(

@@ -109,6 +109,14 @@ export type Winner = {
   nft_address?: string;
 };
 
+export type MachinePull = {
+  memo: string;
+  firstSignature: string;
+  firstBlockTime: number | null;
+  txCount: number;
+  hasError: boolean;
+};
+
 export type PurchasedPack = {
   id: string;
   wallet: string;

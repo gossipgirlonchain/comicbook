@@ -321,7 +321,7 @@ export default function VendingMachine({ onResult }: Props) {
         {/* Stats section */}
         <div className="border-t border-[var(--cb-border)] pt-4 space-y-3">
           <h4 className="text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider">
-            Pack contains
+            Each Pull Contains
           </h4>
           <div className="grid grid-cols-3 gap-2">
             <StatBox label="Cards" value="1" />

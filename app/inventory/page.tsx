@@ -9,21 +9,28 @@ import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import NftGallery from '@/app/components/NftGallery';
 import { gachaApi } from '@/lib/api';
-import type { PurchasedPack } from '@/lib/types';
-import { PACK_CONFIG } from '@/lib/types';
+import type { Winner, MachinePull } from '@/lib/types';
+
+const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
+const EXPLORER_CLUSTER =
+  NETWORK === 'mainnet-beta' ? '' : `?cluster=${NETWORK}`;
+
+type PullStatus = 'revealed' | 'pending' | 'failed';
+
+type EnrichedPull = MachinePull & {
+  status: PullStatus;
+  winner?: Winner;
+};
 
 export default function InventoryPage() {
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
 
-  const [tab, setTab] = React.useState<'collection' | 'purchased'>(
-    'collection'
-  );
-  const [purchasedPacks, setPurchasedPacks] = React.useState<PurchasedPack[]>(
-    []
-  );
+  const [tab, setTab] = React.useState<'collection' | 'pulls'>('collection');
+  const [pulls, setPulls] = React.useState<EnrichedPull[]>([]);
   const [loading, setLoading] = React.useState(false);
+  const [pullsError, setPullsError] = React.useState<string | null>(null);
   const [refreshKey] = React.useState(0);
 
   React.useEffect(() => {
@@ -32,12 +39,51 @@ export default function InventoryPage() {
 
     const load = async () => {
       setLoading(true);
+      setPullsError(null);
       try {
-        const purchased = await gachaApi.getPurchasedPacks(wallet.address);
+        const [pullsRes, winnersRes] = await Promise.all([
+          fetch(
+            `/api/machinePulls?address=${encodeURIComponent(wallet.address)}`,
+            { cache: 'no-store' }
+          ).then(async (r) => {
+            const data = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+            return data as { pulls: MachinePull[] };
+          }),
+          gachaApi.getAllWinners().catch((e) => {
+            console.error('[inventory] getAllWinners failed:', e);
+            return { winners: [] as Winner[] };
+          }),
+        ]);
         if (!alive) return;
-        setPurchasedPacks(purchased.packs ?? []);
-      } catch {
-        /* noop */
+
+        const winnersByMemo = new Map<string, Winner>();
+        for (const w of winnersRes.winners) {
+          if (
+            w.playerAddress === wallet.address &&
+            w.transactionSignature
+          ) {
+            winnersByMemo.set(w.transactionSignature, w);
+          }
+        }
+
+        const enriched: EnrichedPull[] = pullsRes.pulls.map((p) => {
+          const winner = winnersByMemo.get(p.memo);
+          const status: PullStatus = winner
+            ? 'revealed'
+            : p.hasError
+              ? 'failed'
+              : 'pending';
+          return { ...p, status, winner };
+        });
+
+        setPulls(enriched);
+      } catch (e) {
+        console.error('[inventory] load pulls failed:', e);
+        if (alive)
+          setPullsError(
+            e instanceof Error ? e.message : 'Failed to load machine pulls'
+          );
       } finally {
         if (alive) setLoading(false);
       }
@@ -51,7 +97,7 @@ export default function InventoryPage() {
 
   const tabs = [
     { id: 'collection' as const, label: 'Collection' },
-    { id: 'purchased' as const, label: 'Machine Pulls' },
+    { id: 'pulls' as const, label: 'Machine Pulls' },
   ];
 
   return (
@@ -72,7 +118,6 @@ export default function InventoryPage() {
           </div>
         ) : (
           <>
-            {/* Tabs */}
             <div className="flex gap-1 mb-6 p-1 rounded-xl bg-[var(--cb-bg)] border border-[var(--cb-border)] w-fit">
               {tabs.map((t) => (
                 <button
@@ -93,51 +138,13 @@ export default function InventoryPage() {
               <NftGallery owner={wallet?.address} key={refreshKey} />
             )}
 
-            {tab === 'purchased' && (
-              <div>
-                {loading ? (
-                  <div className="flex justify-center py-12">
-                    <div className="spinner spinner-lg" />
-                  </div>
-                ) : purchasedPacks.length === 0 ? (
-                  <div className="text-center py-12 text-[var(--cb-text-muted)]">
-                    <p className="text-lg font-semibold">No machine pulls yet</p>
-                    <p className="text-sm mt-1">
-                      <Link href="/" className="text-[var(--cb-accent)] hover:underline">
-                        Pull the machine
-                      </Link>{' '}
-                      to get started.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                    {purchasedPacks.map((pack) => (
-                      <div
-                        key={pack.id}
-                        className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-4 space-y-2"
-                      >
-                        <div className="text-xs text-[var(--cb-text-muted)]">
-                          {new Date(pack.createdAt).toLocaleDateString()}
-                        </div>
-                        <div className="text-sm font-semibold">
-                          {PACK_CONFIG[pack.packType]?.label ?? 'Pack'}
-                        </div>
-                        <div
-                          className={`inline-block text-xs px-2 py-0.5 rounded-full ${
-                            pack.status === 'opened'
-                              ? 'bg-[var(--cb-success)]/20 text-[var(--cb-success)]'
-                              : 'bg-[var(--cb-accent)]/20 text-[var(--cb-accent)]'
-                          }`}
-                        >
-                          {pack.status}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {tab === 'pulls' && (
+              <PullsList
+                loading={loading}
+                error={pullsError}
+                pulls={pulls}
+              />
             )}
-
           </>
         )}
       </main>
@@ -145,4 +152,124 @@ export default function InventoryPage() {
       <Footer />
     </div>
   );
+}
+
+function PullsList({
+  loading,
+  error,
+  pulls,
+}: {
+  loading: boolean;
+  error: string | null;
+  pulls: EnrichedPull[];
+}) {
+  if (loading) {
+    return (
+      <div className="flex justify-center py-12">
+        <div className="spinner spinner-lg" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-[var(--cb-error)]/30 bg-[var(--cb-error)]/10 p-4 text-sm text-[var(--cb-error)]">
+        Could not load machine pulls: {error}
+      </div>
+    );
+  }
+
+  if (pulls.length === 0) {
+    return (
+      <div className="text-center py-12 text-[var(--cb-text-muted)]">
+        <p className="text-lg font-semibold">No machine pulls yet</p>
+        <p className="text-sm mt-1">
+          <Link
+            href="/"
+            className="text-[var(--cb-accent)] hover:underline"
+          >
+            Pull the machine
+          </Link>{' '}
+          to get started.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {pulls.map((p) => (
+        <PullRow key={p.memo} pull={p} />
+      ))}
+    </div>
+  );
+}
+
+function PullRow({ pull }: { pull: EnrichedPull }) {
+  const date = pull.firstBlockTime
+    ? new Date(pull.firstBlockTime * 1000)
+    : null;
+  const explorerUrl = `https://explorer.solana.com/tx/${pull.firstSignature}${EXPLORER_CLUSTER}`;
+
+  const statusChip = (() => {
+    if (pull.status === 'revealed') {
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--cb-success)]/20 text-[var(--cb-success)] font-semibold">
+          Revealed
+        </span>
+      );
+    }
+    if (pull.status === 'failed') {
+      return (
+        <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--cb-error)]/20 text-[var(--cb-error)] font-semibold">
+          On-chain failed
+        </span>
+      );
+    }
+    return (
+      <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--cb-warning)]/20 text-[var(--cb-warning)] font-semibold">
+        Pending reveal
+      </span>
+    );
+  })();
+
+  const body = (
+    <div className="flex items-center gap-3 rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-3 hover:bg-[var(--cb-surface-hover)] transition-colors">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold truncate">
+            {pull.winner?.nftWon.content.metadata.name ?? 'Pull'}
+          </span>
+          {statusChip}
+        </div>
+        <div className="text-xs text-[var(--cb-text-muted)] mt-0.5 flex items-center gap-2 flex-wrap">
+          <span>{date ? date.toLocaleString() : 'Unknown time'}</span>
+          <span className="text-[var(--cb-border)]">·</span>
+          <span className="font-mono">
+            {pull.memo.slice(0, 11)}…{pull.memo.slice(-4)}
+          </span>
+          <span className="text-[var(--cb-border)]">·</span>
+          <a
+            href={explorerUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[var(--cb-accent)] hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            View tx
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (pull.winner) {
+    const mint = pull.winner.nft_address ?? pull.winner.nftWon.id;
+    return (
+      <Link href={`/cards/${mint}`} className="block">
+        {body}
+      </Link>
+    );
+  }
+  return body;
 }

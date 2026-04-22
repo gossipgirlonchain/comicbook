@@ -12,7 +12,7 @@ export default function Header() {
   const { theme, toggle } = useTheme();
 
   const navLinks = [
-    { href: '/', label: 'Gacha' },
+    { href: '/', label: 'Vending Machine' },
     { href: '/how-it-works', label: 'How It Works' },
     ...(authenticated
       ? [

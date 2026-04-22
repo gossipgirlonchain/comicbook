@@ -50,7 +50,7 @@ export default function HowItWorksPage() {
               href="/"
               className="inline-block px-8 py-3 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-bold transition-colors"
             >
-              Open the Machine
+              Pull the Machine
             </Link>
           </section>
         </div>
