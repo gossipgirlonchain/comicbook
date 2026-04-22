@@ -1,15 +1,21 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import { useTheme } from '@/lib/theme';
 
 export default function Header() {
   const pathname = usePathname();
-  const { authenticated } = usePrivy();
+  const router = useRouter();
+  const { authenticated, login } = usePrivy();
   const { theme, toggle } = useTheme();
+
+  const handleCta = () => {
+    if (!authenticated) login();
+    else router.push('/');
+  };
 
   const navLinks = [
     { href: '/', label: 'Vending Machine' },
@@ -59,6 +65,12 @@ export default function Header() {
         </div>
         <div className="flex items-center gap-2">
           <button
+            onClick={handleCta}
+            className="px-4 sm:px-6 py-2.5 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-bold text-sm transition-colors shadow-lg shadow-[var(--cb-accent)]/20"
+          >
+            Open a Pack
+          </button>
+          <button
             onClick={toggle}
             className="w-9 h-9 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
             title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
@@ -74,7 +86,7 @@ export default function Header() {
               </svg>
             )}
           </button>
-          <PrivyConnect />
+          <PrivyConnect hideLogin />
         </div>
       </div>
     </header>

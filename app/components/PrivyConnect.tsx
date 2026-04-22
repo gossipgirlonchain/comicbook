@@ -4,7 +4,11 @@ import { usePrivy } from '@privy-io/react-auth';
 import { useWallets } from '@privy-io/react-auth/solana';
 import { useState, useEffect } from 'react';
 
-export default function PrivyConnect() {
+export default function PrivyConnect({
+  hideLogin = false,
+}: {
+  hideLogin?: boolean;
+} = {}) {
   const { authenticated, login, logout } = usePrivy();
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
@@ -45,6 +49,7 @@ export default function PrivyConnect() {
   }, [authenticated, wallet?.address]);
 
   if (!authenticated) {
+    if (hideLogin) return null;
     return (
       <button
         onClick={login}
