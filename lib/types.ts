@@ -115,6 +115,12 @@ export type MachinePull = {
   firstBlockTime: number | null;
   txCount: number;
   hasError: boolean;
+  card?: {
+    id: string;
+    nftWon: NftWon;
+    rarity: Rarity | null;
+    insuredValue: string | null;
+  };
 };
 
 export type PurchasedPack = {

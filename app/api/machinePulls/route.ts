@@ -1,14 +1,60 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
-import type { MachinePull } from '@/lib/types';
+import type { MachinePull, NftWon, Rarity } from '@/lib/types';
 
 const RPC_URL = process.env.SOLANA_RPC || 'https://api.devnet.solana.com';
+const CC_BASE = process.env.COLLECTOR_CRYPT_BASE_URL;
+const CC_KEY = process.env.COLLECTOR_CRYPT_API_KEY;
 
 // getSignaturesForAddress returns memos in the form "[<len>] cb-<uuid>",
 // where [<len>] is the memo program's length prefix. We extract just the
 // cb-<uuid> slug because that's the pull identifier CC echoes back as
-// memo_slug on the winners feed.
+// memo_slug on the winners feed and accepts on openPack.
 const MEMO_RE = /(cb-[0-9a-f-]{36})/i;
+
+type ResolvedCard = {
+  id: string;
+  nftWon: NftWon;
+  rarity: Rarity | null;
+  insuredValue: string | null;
+};
+
+type EnrichedPull = MachinePull & {
+  card?: ResolvedCard;
+};
+
+async function resolveCard(memo: string): Promise<ResolvedCard | null> {
+  if (!CC_BASE || !CC_KEY) return null;
+  try {
+    const res = await fetch(`${CC_BASE}/api/openPack`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': CC_KEY,
+      },
+      body: JSON.stringify({ memo }),
+      cache: 'no-store',
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.success || !data.nft_address || !data.nftWon) return null;
+
+    const attrs: Array<{ trait_type: string; value: string }> =
+      data.nftWon.content?.metadata?.attributes ?? [];
+    const rarity = attrs.find((a) => a.trait_type === 'Rarity')?.value ?? null;
+    const insuredValue =
+      attrs.find((a) => a.trait_type === 'Insured Value')?.value ?? null;
+
+    return {
+      id: data.nft_address,
+      nftWon: data.nftWon,
+      rarity: rarity as Rarity | null,
+      insuredValue,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export async function GET(req: NextRequest) {
   const address = req.nextUrl.searchParams.get('address');
@@ -55,9 +101,22 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const pulls = Array.from(byPull.values()).sort(
+    const raw = Array.from(byPull.values()).sort(
       (a, b) => (b.firstBlockTime ?? 0) - (a.firstBlockTime ?? 0)
     );
+
+    // Resolve cards for non-failed pulls in parallel. CC's openPack returns
+    // the card bound to this memo even after the original webhook has fired
+    // (or never fired), so this works as our source of truth for "what did
+    // this pull win" even when /getAllWinners is stale.
+    const pulls: EnrichedPull[] = await Promise.all(
+      raw.map(async (p) => {
+        if (p.hasError) return p;
+        const card = await resolveCard(p.memo);
+        return card ? { ...p, card } : p;
+      })
+    );
+
     return NextResponse.json({ pulls });
   } catch (e) {
     return NextResponse.json(

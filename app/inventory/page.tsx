@@ -7,9 +7,9 @@ import { useWallets } from '@privy-io/react-auth/solana';
 import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
-import NftGallery from '@/app/components/NftGallery';
-import { gachaApi } from '@/lib/api';
-import type { Winner, MachinePull } from '@/lib/types';
+import { getNftImageUrl } from '@/lib/solana';
+import type { MachinePull } from '@/lib/types';
+import { RARITY_COLORS } from '@/lib/types';
 
 const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
 const EXPLORER_CLUSTER =
@@ -17,10 +17,13 @@ const EXPLORER_CLUSTER =
 
 type PullStatus = 'revealed' | 'pending' | 'failed';
 
-type EnrichedPull = MachinePull & {
-  status: PullStatus;
-  winner?: Winner;
-};
+type EnrichedPull = MachinePull & { status: PullStatus };
+
+function deriveStatus(p: MachinePull): PullStatus {
+  if (p.hasError) return 'failed';
+  if (p.card) return 'revealed';
+  return 'pending';
+}
 
 export default function InventoryPage() {
   const { ready, authenticated } = usePrivy();
@@ -30,8 +33,7 @@ export default function InventoryPage() {
   const [tab, setTab] = React.useState<'collection' | 'pulls'>('collection');
   const [pulls, setPulls] = React.useState<EnrichedPull[]>([]);
   const [loading, setLoading] = React.useState(false);
-  const [pullsError, setPullsError] = React.useState<string | null>(null);
-  const [refreshKey] = React.useState(0);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!wallet?.address) return;
@@ -39,50 +41,22 @@ export default function InventoryPage() {
 
     const load = async () => {
       setLoading(true);
-      setPullsError(null);
+      setError(null);
       try {
-        const [pullsRes, winnersRes] = await Promise.all([
-          fetch(
-            `/api/machinePulls?address=${encodeURIComponent(wallet.address)}`,
-            { cache: 'no-store' }
-          ).then(async (r) => {
-            const data = await r.json().catch(() => ({}));
-            if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
-            return data as { pulls: MachinePull[] };
-          }),
-          gachaApi.getAllWinners().catch((e) => {
-            console.error('[inventory] getAllWinners failed:', e);
-            return { winners: [] as Winner[] };
-          }),
-        ]);
+        const res = await fetch(
+          `/api/machinePulls?address=${encodeURIComponent(wallet.address)}`,
+          { cache: 'no-store' }
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
         if (!alive) return;
-
-        const winnersByMemo = new Map<string, Winner>();
-        for (const w of winnersRes.winners) {
-          if (
-            w.playerAddress === wallet.address &&
-            w.transactionSignature
-          ) {
-            winnersByMemo.set(w.transactionSignature, w);
-          }
-        }
-
-        const enriched: EnrichedPull[] = pullsRes.pulls.map((p) => {
-          const winner = winnersByMemo.get(p.memo);
-          const status: PullStatus = winner
-            ? 'revealed'
-            : p.hasError
-              ? 'failed'
-              : 'pending';
-          return { ...p, status, winner };
-        });
-
-        setPulls(enriched);
+        const raw = (data.pulls ?? []) as MachinePull[];
+        setPulls(raw.map((p) => ({ ...p, status: deriveStatus(p) })));
       } catch (e) {
         console.error('[inventory] load pulls failed:', e);
         if (alive)
-          setPullsError(
-            e instanceof Error ? e.message : 'Failed to load machine pulls'
+          setError(
+            e instanceof Error ? e.message : 'Failed to load inventory'
           );
       } finally {
         if (alive) setLoading(false);
@@ -93,11 +67,13 @@ export default function InventoryPage() {
     return () => {
       alive = false;
     };
-  }, [wallet?.address, refreshKey]);
+  }, [wallet?.address]);
+
+  const revealed = pulls.filter((p) => p.status === 'revealed' && p.card);
 
   const tabs = [
-    { id: 'collection' as const, label: 'Collection' },
-    { id: 'pulls' as const, label: 'Machine Pulls' },
+    { id: 'collection' as const, label: `Collection${revealed.length ? ` (${revealed.length})` : ''}` },
+    { id: 'pulls' as const, label: `Machine Pulls${pulls.length ? ` (${pulls.length})` : ''}` },
   ];
 
   return (
@@ -135,21 +111,119 @@ export default function InventoryPage() {
             </div>
 
             {tab === 'collection' && (
-              <NftGallery owner={wallet?.address} key={refreshKey} />
+              <CollectionGrid
+                loading={loading}
+                error={error}
+                pulls={revealed}
+              />
             )}
 
             {tab === 'pulls' && (
-              <PullsList
-                loading={loading}
-                error={pullsError}
-                pulls={pulls}
-              />
+              <PullsList loading={loading} error={error} pulls={pulls} />
             )}
           </>
         )}
       </main>
 
       <Footer />
+    </div>
+  );
+}
+
+function CollectionGrid({
+  loading,
+  error,
+  pulls,
+}: {
+  loading: boolean;
+  error: string | null;
+  pulls: EnrichedPull[];
+}) {
+  if (loading) {
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            className="aspect-square rounded-xl bg-[var(--cb-surface)] animate-pulse"
+          />
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-lg border border-[var(--cb-error)]/30 bg-[var(--cb-error)]/10 p-4 text-sm text-[var(--cb-error)]">
+        Could not load collection: {error}
+      </div>
+    );
+  }
+
+  if (pulls.length === 0) {
+    return (
+      <div className="text-center py-12 text-[var(--cb-text-muted)]">
+        <p className="text-lg font-semibold">No cards yet</p>
+        <p className="text-sm mt-1">
+          <Link href="/" className="text-[var(--cb-accent)] hover:underline">
+            Pull the machine
+          </Link>{' '}
+          to start your collection.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+      {pulls.map((p) => {
+        if (!p.card) return null;
+        const { card } = p;
+        const colors = card.rarity ? RARITY_COLORS[card.rarity] : null;
+        const name = card.nftWon.content.metadata.name || card.id;
+        const img = getNftImageUrl(card.nftWon);
+        return (
+          <Link
+            key={p.memo}
+            href={`/cards/${card.id}`}
+            className={`group rounded-xl border overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${
+              colors
+                ? `${colors.border} hover:${colors.glow}`
+                : 'border-[var(--cb-border)]'
+            } bg-[var(--cb-surface)]`}
+          >
+            <div className="aspect-square bg-[var(--cb-bg)] p-2">
+              {img ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={img}
+                  alt={name}
+                  className="w-full h-full object-contain rounded-lg"
+                />
+              ) : (
+                <div className="w-full h-full rounded-lg bg-[var(--cb-surface)]" />
+              )}
+            </div>
+            <div className="p-2.5">
+              <p className="text-xs font-semibold truncate">{name}</p>
+              <div className="flex items-center justify-between mt-1">
+                {card.rarity && colors && (
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}
+                  >
+                    {card.rarity}
+                  </span>
+                )}
+                {card.insuredValue && (
+                  <span className="text-[10px] font-bold text-[var(--cb-success)]">
+                    ${card.insuredValue}
+                  </span>
+                )}
+              </div>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   );
 }
@@ -184,10 +258,7 @@ function PullsList({
       <div className="text-center py-12 text-[var(--cb-text-muted)]">
         <p className="text-lg font-semibold">No machine pulls yet</p>
         <p className="text-sm mt-1">
-          <Link
-            href="/"
-            className="text-[var(--cb-accent)] hover:underline"
-          >
+          <Link href="/" className="text-[var(--cb-accent)] hover:underline">
             Pull the machine
           </Link>{' '}
           to get started.
@@ -233,14 +304,31 @@ function PullRow({ pull }: { pull: EnrichedPull }) {
     );
   })();
 
+  const cardImg = pull.card ? getNftImageUrl(pull.card.nftWon) : null;
+  const cardName =
+    pull.card?.nftWon.content.metadata.name ?? 'Pull';
+
   const body = (
     <div className="flex items-center gap-3 rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-3 hover:bg-[var(--cb-surface-hover)] transition-colors">
+      {cardImg && (
+        <div className="w-12 h-12 rounded-lg overflow-hidden bg-[var(--cb-bg)] flex-shrink-0 p-1">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cardImg}
+            alt={cardName}
+            className="w-full h-full object-contain"
+          />
+        </div>
+      )}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-semibold truncate">
-            {pull.winner?.nftWon.content.metadata.name ?? 'Pull'}
-          </span>
+          <span className="text-sm font-semibold truncate">{cardName}</span>
           {statusChip}
+          {pull.card?.insuredValue && (
+            <span className="text-xs font-bold text-[var(--cb-success)]">
+              ${pull.card.insuredValue}
+            </span>
+          )}
         </div>
         <div className="text-xs text-[var(--cb-text-muted)] mt-0.5 flex items-center gap-2 flex-wrap">
           <span>{date ? date.toLocaleString() : 'Unknown time'}</span>
@@ -263,10 +351,9 @@ function PullRow({ pull }: { pull: EnrichedPull }) {
     </div>
   );
 
-  if (pull.winner) {
-    const mint = pull.winner.nft_address ?? pull.winner.nftWon.id;
+  if (pull.card) {
     return (
-      <Link href={`/cards/${mint}`} className="block">
+      <Link href={`/cards/${pull.card.id}`} className="block">
         {body}
       </Link>
     );
