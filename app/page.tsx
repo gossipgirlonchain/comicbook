@@ -129,7 +129,10 @@ export default function Home() {
           </div>
 
           {/* RIGHT: Machine panel */}
-          <div className="w-full lg:w-[380px] flex-shrink-0">
+          <div
+            id="vending-machine"
+            className="w-full lg:w-[380px] flex-shrink-0 scroll-mt-24"
+          >
             <VendingMachine key={refreshKey} onResult={handleResult} />
           </div>
         </div>

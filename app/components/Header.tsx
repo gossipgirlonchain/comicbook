@@ -16,8 +16,33 @@ export default function Header() {
 
   const handleCta = () => {
     setMenuOpen(false);
-    if (!authenticated) login();
-    else router.push('/');
+    if (!authenticated) {
+      login();
+      return;
+    }
+    // Scroll-lock libraries (HeadlessUI, Privy modal) can set
+    // `overflow: hidden` inline on <html> and, in some close paths, leave
+    // it behind. When that happens scrollIntoView / scrollTo silently
+    // no-op. Clear any leaked lock before scrolling so the CTA always
+    // responds.
+    const scrollToMachine = () => {
+      const html = document.documentElement;
+      if (html.style.overflow === 'hidden') html.style.overflow = '';
+      if (html.style.paddingRight) html.style.paddingRight = '';
+      const el = document.getElementById('vending-machine');
+      if (!el) return false;
+      const top = el.getBoundingClientRect().top + window.scrollY - 88;
+      window.scrollTo({ top, behavior: 'smooth' });
+      return true;
+    };
+    if (pathname === '/') {
+      scrollToMachine();
+      return;
+    }
+    router.push('/#vending-machine');
+    // Next.js can miss the hash scroll when the target mounts after
+    // navigation. Do it ourselves after the new page renders.
+    setTimeout(scrollToMachine, 350);
   };
 
   const navLinks = [
