@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { usePrivy } from '@privy-io/react-auth';
@@ -11,8 +12,10 @@ export default function Header() {
   const router = useRouter();
   const { authenticated, login } = usePrivy();
   const { theme, toggle } = useTheme();
+  const [menuOpen, setMenuOpen] = React.useState(false);
 
   const handleCta = () => {
+    setMenuOpen(false);
     if (!authenticated) login();
     else router.push('/');
   };
@@ -29,51 +32,53 @@ export default function Header() {
       : []),
   ];
 
+  // Close the drawer when the route changes (e.g. after tapping a link).
+  React.useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
   return (
     <header className="border-b border-[var(--cb-border)] bg-[var(--cb-primary)] sticky top-0 z-40">
-      <div className="max-w-[1400px] mx-auto px-4 py-2 flex items-center justify-between">
-        <div className="flex items-center gap-6">
+      <div className="max-w-[1400px] mx-auto px-4 py-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-6 min-w-0">
           <Link href="/" className="flex-shrink-0 py-1">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/cb-logo-white.png"
               alt="ComicBook.com"
-              className="h-14 w-auto"
+              className="h-10 sm:h-14 w-auto"
             />
           </Link>
-          <nav className="hidden sm:flex items-center gap-1">
-            {navLinks.map((link) => {
-              const active =
-                link.href === '/'
-                  ? pathname === '/'
-                  : pathname.startsWith(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                    active
-                      ? 'bg-white/10 text-white'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
+          <nav className="hidden md:flex items-center gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
           </nav>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
           <button
             onClick={handleCta}
-            className="px-4 sm:px-6 py-2.5 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-bold text-sm transition-colors shadow-lg shadow-[var(--cb-accent)]/20"
+            className="px-3 sm:px-6 py-2 sm:py-2.5 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-bold text-xs sm:text-sm transition-colors shadow-lg shadow-[var(--cb-accent)]/20 whitespace-nowrap"
           >
             Pull the Machine
           </button>
           <button
             onClick={toggle}
-            className="w-9 h-9 rounded-lg flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            className="hidden sm:flex w-9 h-9 rounded-lg items-center justify-center text-white/60 hover:text-white hover:bg-white/10 transition-colors"
           >
             {theme === 'dark' ? (
               <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -86,9 +91,67 @@ export default function Header() {
               </svg>
             )}
           </button>
-          <PrivyConnect hideLogin />
+          <div className="hidden sm:block">
+            <PrivyConnect hideLogin />
+          </div>
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            className="md:hidden w-9 h-9 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          >
+            {menuOpen ? (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M6 18L18 6" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Mobile drawer */}
+      {menuOpen && (
+        <div className="md:hidden border-t border-white/10 bg-[var(--cb-primary)]">
+          <nav className="max-w-[1400px] mx-auto px-4 py-3 flex flex-col gap-1">
+            {navLinks.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive(link.href)
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/70 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+            <div className="mt-2 pt-3 border-t border-white/10 flex items-center justify-between gap-2">
+              <button
+                onClick={toggle}
+                className="px-3 py-2 rounded-lg text-sm font-medium text-white/70 hover:text-white hover:bg-white/5 transition-colors flex items-center gap-2"
+              >
+                {theme === 'dark' ? (
+                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <circle cx="12" cy="12" r="5" />
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                  </svg>
+                ) : (
+                  <svg className="w-[18px] h-[18px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+                  </svg>
+                )}
+                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              </button>
+              <PrivyConnect hideLogin />
+            </div>
+          </nav>
+        </div>
+      )}
     </header>
   );
 }
