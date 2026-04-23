@@ -74,6 +74,19 @@ html.light {
   scrollbar-color: var(--cb-border) transparent;
 }
 
+/* Tailwind v4 no longer forces cursor:pointer on buttons. Restore it
+   globally for enabled, non-link buttons and anchor tags with an href —
+   these are always clickable and users expect the finger cursor. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+a[href] {
+  cursor: pointer;
+}
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 body {
   background: var(--cb-bg);
   color: var(--cb-text);

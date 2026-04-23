@@ -63,11 +63,13 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
       <Header />
 
-      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 py-6">
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* LEFT: Card grid */}
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-bold mb-4 text-[var(--cb-text)]">
+      <main className="flex-1 max-w-[1400px] mx-auto w-full px-4 py-4 sm:py-6">
+        <div className="flex flex-col lg:flex-row gap-4 sm:gap-6">
+          {/* Card grid. Visually second on mobile so the machine is the first
+              thing users see — that's where the action is. On desktop it
+              goes back to the left. */}
+          <div className="flex-1 min-w-0 order-2 lg:order-1">
+            <h2 className="text-lg font-bold mb-3 sm:mb-4 text-[var(--cb-text)]">
               Loaded in the Machine
             </h2>
 
@@ -128,10 +130,10 @@ export default function Home() {
             )}
           </div>
 
-          {/* RIGHT: Machine panel */}
+          {/* Machine panel. First on mobile (order-1), right rail on desktop. */}
           <div
             id="vending-machine"
-            className="w-full lg:w-[380px] flex-shrink-0 scroll-mt-24"
+            className="w-full lg:w-[380px] flex-shrink-0 scroll-mt-24 order-1 lg:order-2"
           >
             <VendingMachine key={refreshKey} onResult={handleResult} />
           </div>
