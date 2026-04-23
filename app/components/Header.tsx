@@ -68,7 +68,7 @@ export default function Header() {
             onClick={handleCta}
             className="px-4 sm:px-6 py-2.5 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-bold text-sm transition-colors shadow-lg shadow-[var(--cb-accent)]/20"
           >
-            Open a Pack
+            Pull the Machine
           </button>
           <button
             onClick={toggle}
