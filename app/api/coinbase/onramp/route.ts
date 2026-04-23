@@ -1,9 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { SignJWT, importPKCS8, importJWK } from 'jose';
+import {
+  SignJWT,
+  importPKCS8,
+  importJWK,
+  jwtVerify,
+  createRemoteJWKSet,
+} from 'jose';
 import crypto from 'crypto';
 
 const CDP_API_KEY_ID = process.env.CDP_API_KEY_ID || '';
 const CDP_API_KEY_SECRET = process.env.CDP_API_KEY_SECRET || '';
+const PRIVY_APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || '';
+
+// Privy access tokens are signed ES256 JWTs. Verifying against the public
+// JWKS doesn't require a server secret — the app ID alone is enough, and
+// jose caches the JWKS across requests on the module.
+const PRIVY_JWKS = PRIVY_APP_ID
+  ? createRemoteJWKSet(
+      new URL(
+        `https://auth.privy.io/api/v1/apps/${PRIVY_APP_ID}/jwks.json`
+      )
+    )
+  : null;
 
 // Normalize `\n` / `\r\n` escape sequences back to real newlines. Vercel env
 // vars frequently store multi-line PEMs with literal `\n`, which breaks
@@ -71,12 +89,84 @@ async function generateCdpJwt(method: string, fullUrl: string) {
     .sign(key);
 }
 
+async function verifyPrivyCaller(req: NextRequest): Promise<string | null> {
+  if (!PRIVY_JWKS) return null;
+  const auth = req.headers.get('authorization') || '';
+  const match = auth.match(/^Bearer\s+(.+)$/i);
+  if (!match) return null;
+  try {
+    const { payload } = await jwtVerify(match[1], PRIVY_JWKS, {
+      issuer: 'privy.io',
+      audience: PRIVY_APP_ID,
+    });
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
+  }
+}
+
+// Coinbase requires a real client IP so the session token is bound to the
+// originating user. Behind Vercel, the real IP is the first entry in the
+// x-forwarded-for list; x-real-ip is a backup that some providers populate.
+function getClientIp(req: NextRequest): string | null {
+  const xff = req.headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  const realIp = req.headers.get('x-real-ip');
+  if (realIp) return realIp.trim();
+  return null;
+}
+
+// Simple per-IP rate limiter: 10 token requests / 5 minutes. Prevents a
+// logged-in attacker from farming session tokens from our backend.
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RL_WINDOW_MS = 5 * 60_000;
+const RL_MAX = 10;
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RL_WINDOW_MS });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RL_MAX;
+}
+
 export async function POST(req: NextRequest) {
   try {
+    const privyUserId = await verifyPrivyCaller(req);
+    if (!privyUserId) {
+      return NextResponse.json(
+        { error: 'Sign in to continue.' },
+        { status: 401 }
+      );
+    }
+
     if (!CDP_API_KEY_ID || !CDP_API_KEY_SECRET) {
       return NextResponse.json(
         { error: 'Card payments are not available right now. Please try again later.' },
         { status: 503 }
+      );
+    }
+
+    const clientIp = getClientIp(req);
+    if (!clientIp) {
+      // Coinbase rejects session tokens without a client IP. Failing here
+      // produces a clearer error than letting Coinbase 400.
+      return NextResponse.json(
+        { error: 'Unable to determine client IP' },
+        { status: 400 }
+      );
+    }
+
+    if (isRateLimited(clientIp)) {
+      return NextResponse.json(
+        { error: 'Too many requests. Try again in a few minutes.' },
+        { status: 429 }
       );
     }
 
@@ -99,6 +189,7 @@ export async function POST(req: NextRequest) {
       },
       body: JSON.stringify({
         addresses: [{ address, blockchains: ['solana'] }],
+        clientIp,
       }),
     });
 

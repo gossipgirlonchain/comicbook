@@ -8,7 +8,7 @@ import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
 
 export default function DepositPage() {
-  const { ready, authenticated } = usePrivy();
+  const { ready, authenticated, getAccessToken } = usePrivy();
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
 
@@ -21,9 +21,17 @@ export default function DepositPage() {
     setBuyLoading(true);
 
     try {
+      const accessToken = await getAccessToken();
+      if (!accessToken) {
+        setBuyError('Session expired. Please sign in again.');
+        return;
+      }
       const res = await fetch('/api/coinbase/onramp', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify({ address: wallet.address }),
       });
 
