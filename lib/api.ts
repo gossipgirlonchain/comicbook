@@ -187,16 +187,20 @@ export const gachaApi = {
 
   openPack: (memo: string) => pollOpenPack(memo),
 
-  generateYoloPacks: (
+  generateYoloPacks: async (
     playerAddress: string,
     packType: PackType,
     count: number
-  ) =>
-    post<GenerateYoloPacksResponse>('generateYoloPacks', {
-      playerAddress,
-      packType,
-      count,
-    }),
+  ): Promise<GenerateYoloPacksResponse> => {
+    // CC returns { yoloId, count, transactions: [...] } for YOLO but the
+    // original single-pull endpoint uses { packs: [...] }. Normalise so the
+    // vending machine only has to understand one shape.
+    const raw = await post<{
+      packs?: Array<{ transaction: string; memo: string }>;
+      transactions?: Array<{ transaction: string; memo: string }>;
+    }>('generateYoloPacks', { playerAddress, packType, count });
+    return { packs: raw.packs ?? raw.transactions ?? [] };
+  },
 
   buyback: (playerAddress: string, nftAddress: string) =>
     post<BuybackResponse>('buyback', { playerAddress, nftAddress }),
