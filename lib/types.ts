@@ -24,6 +24,20 @@ export type PackType = 'pokemon_25' | 'pokemon_50' | 'pokemon_250';
 
 export type Rarity = 'Common' | 'Uncommon' | 'Rare' | 'Epic' | 'Legendary';
 
+// CC's card metadata doesn't include a Rarity trait, so we bucket by
+// insuredValue. Thresholds mirror the odds table shown in the vending
+// machine ($30/60/110/250). $1000+ gets Legendary since the UI supports it
+// even though the odds table tops out at Epic.
+export function insuredValueToRarity(value: number | string | null | undefined): Rarity {
+  const n = typeof value === 'number' ? value : Number(value ?? 0);
+  if (!isFinite(n)) return 'Common';
+  if (n >= 1000) return 'Legendary';
+  if (n >= 250) return 'Epic';
+  if (n >= 110) return 'Rare';
+  if (n >= 60) return 'Uncommon';
+  return 'Common';
+}
+
 export type NftFile = {
   uri?: string;
   cdn_uri?: string;

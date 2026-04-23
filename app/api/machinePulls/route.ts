@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Connection, PublicKey } from '@solana/web3.js';
 import type { MachinePull, NftWon, Rarity } from '@/lib/types';
+import { insuredValueToRarity } from '@/lib/types';
 
 const RPC_URL = process.env.SOLANA_RPC || 'https://api.devnet.solana.com';
 const CC_BASE = process.env.COLLECTOR_CRYPT_BASE_URL;
@@ -41,14 +42,20 @@ async function resolveCard(memo: string): Promise<ResolvedCard | null> {
 
     const attrs: Array<{ trait_type: string; value: string }> =
       data.nftWon.content?.metadata?.attributes ?? [];
-    const rarity = attrs.find((a) => a.trait_type === 'Rarity')?.value ?? null;
+    const rarityAttr =
+      (attrs.find((a) => a.trait_type === 'Rarity')?.value as Rarity | undefined) ??
+      null;
     const insuredValue =
       attrs.find((a) => a.trait_type === 'Insured Value')?.value ?? null;
+    // CC's metadata rarely ships the Rarity trait today, so fall back to
+    // bucketing by insuredValue — same logic the winners feed uses.
+    const rarity: Rarity | null =
+      rarityAttr ?? (insuredValue ? insuredValueToRarity(insuredValue) : null);
 
     return {
       id: data.nft_address,
       nftWon: data.nftWon,
-      rarity: rarity as Rarity | null,
+      rarity,
       insuredValue,
     };
   } catch {
