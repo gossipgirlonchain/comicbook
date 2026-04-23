@@ -113,15 +113,35 @@ export default function VendingMachine({ onResult }: Props) {
       if (isYolo) await handleYoloPurchase(w);
       else await handleStandardPurchase(w);
     } catch (e) {
+      // Log the raw error so DevTools always has the ground truth — the
+      // user-facing copy below is best-effort and only covers a few known
+      // shapes. Any 500 we don't specifically recognise is surfaced verbatim.
+      console.error('[VendingMachine] pull failed:', e);
       setPhase('error');
       if (e instanceof ApiError) {
-        if (e.status === 500) setError('Pack out of stock. Try again later.');
-        else if (e.status === 403) setError('Not eligible for this pack type.');
-        else setError(e.message);
+        const msg = (e.message || '').toLowerCase();
+        const looksOutOfStock =
+          msg.includes('stock') ||
+          msg.includes('inventory') ||
+          msg.includes('sold out');
+        if (looksOutOfStock) {
+          setError('Pack out of stock. Try again later.');
+        } else if (e.status === 403) {
+          setError('Not eligible for this pack type.');
+        } else if (e.message) {
+          setError(e.message);
+        } else {
+          setError(`Pull failed (HTTP ${e.status}). Please try again.`);
+        }
       } else if (e instanceof Error) {
-        if (e.message.includes('User rejected') || e.message.includes('cancelled'))
+        if (
+          e.message.includes('User rejected') ||
+          e.message.includes('cancelled')
+        ) {
           setError('Transaction cancelled. You can try again.');
-        else setError(e.message);
+        } else {
+          setError(e.message);
+        }
       } else {
         setError('Something went wrong. Please try again.');
       }
