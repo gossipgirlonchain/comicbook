@@ -1,6 +1,6 @@
 # ComicBook.com — Digital Vending Machine
 
-A gacha-style NFT vending machine built on Next.js 16, Privy wallet auth, and Solana, powered by the CollectorCrypt API.
+A gacha-style digital vending machine for graded trading cards, built on Next.js 16, Privy wallet auth, and Solana, powered by the CollectorCrypt API.
 
 ## Repository Setup
 
@@ -107,7 +107,7 @@ Browser                    Next.js Server              CollectorCrypt
 | GET | `status` | Machine status (running/stopped) |
 | GET | `stock` | Pack inventory levels |
 | GET | `getAllWinners` | Recent pack openings |
-| GET | `getNfts` | All NFTs (optional `?owner=` filter) |
+| GET | `getNfts` | All cards in the house pool (optional `?owner=` filter) |
 | GET | `purchasedPacks` | User's purchased packs (`?wallet=`) |
 | GET | `getGifted` | User's gifted packs (`?wallet=`) |
 | GET | `buyback/check` | Poll buyback completion (`?memo=`) |
@@ -115,7 +115,7 @@ Browser                    Next.js Server              CollectorCrypt
 | POST | `submitTransaction` | Submit a signed transaction |
 | POST | `openPack` | Poll for pack opening result |
 | POST | `generateYoloPacks` | Batch generate multiple packs |
-| POST | `buyback` | Initiate NFT buyback |
+| POST | `buyback` | Initiate card buyback |
 | POST | `generatePurchasedPack` | Create message to sign for purchased pack |
 | POST | `usePurchasedPack` | Consume a purchased pack |
 | POST | `generateGift` | Create gift transaction |
@@ -142,7 +142,7 @@ app/
     PrivyConnect.tsx      Login button / wallet display / USDC balance
     VendingMachine.tsx    Pack selection, purchase flow, stats, winners
     PackReveal.tsx        Video intro + card flip reveal + buyback
-    NftGallery.tsx        Reusable NFT grid (used in inventory)
+    NftGallery.tsx        Reusable card grid (used in inventory)
     WinnersFeed.tsx       Horizontal scrolling winners ticker
 
   marketplace/
@@ -176,8 +176,8 @@ public/
 3. Transaction is deserialized and signed via Privy wallet
 4. Signed transaction submitted via `submitTransaction()`
 5. Client polls `openPack(memo)` every 500ms (30s timeout)
-6. Result returned with NFT metadata, rarity, points
-7. Pack reveal video plays → card flip animation → NFT displayed
+6. Result returned with card metadata, rarity, points
+7. Pack reveal video plays → card flip animation → card displayed
 
 ### YOLO Multi-Pack
 
@@ -185,9 +185,10 @@ Same as above but `generateYoloPacks()` returns an array of transactions. All ar
 
 ### Buyback
 
-- Available for 24 hours after opening
+- Available for 72 hours after opening (per CollectorCrypt API)
 - Returns 85% of insured value
 - Flow: `buyback()` → sign tx → `submitTransaction()` → `pollBuybackCheck(memo)`
+- Polling timeout is 90s; if it expires, the sale is treated as optimistically successful (the on-chain tx was already submitted) and the card is removed from the user's collection while the CC webhook catches up
 
 ### Gifted Packs
 

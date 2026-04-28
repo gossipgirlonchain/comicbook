@@ -93,9 +93,9 @@ export default function BuybackAction({
       onComplete?.();
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
-        // CC returns 400 with messages like "No matching NFT found within
-        // the allowed time window" (72-hour buyback window) or other
-        // validation failures. Surface CC's message when available.
+        // CC returns 400 for cards outside the 72-hour buyback window or
+        // other validation failures. Surface CC's own error message when
+        // present so users see the real reason.
         const msg =
           (e.data?.error as string) ||
           (e.data?.message as string) ||
@@ -272,7 +272,7 @@ function SellConfirmDialog({
   );
 }
 
-/** Helper: pull the Insured Value attr off an NFT. */
+/** Helper: pull the Insured Value attr off a card. */
 export function getInsuredValueFromAttrs(
   attributes: Array<{ trait_type: string; value: string }> | undefined
 ): number {

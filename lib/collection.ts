@@ -2,7 +2,7 @@
  * User collection derivation.
  *
  * CC's `getNfts` endpoint returns their house inventory pool, NOT what a user
- * owns — every NFT is owned by one of CC's pool wallets (LGNDkso..., Lowovru...,
+ * owns — every card is held by one of CC's pool wallets (LGNDkso..., Lowovru...,
  * MidJLFX..., HighMAx..., Epicazw...). Filtering by `ownership.owner === user`
  * returns zero matches, which is why "My Collection" was always empty.
  *
