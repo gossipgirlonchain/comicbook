@@ -9,7 +9,8 @@ import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import { privyToCoinflowWallet } from '@/lib/privy-coinflow-wallet';
-import type { WalletAdapter } from '@/lib/types';
+import type { PackType, WalletAdapter } from '@/lib/types';
+import { PACK_CONFIG, YOLO_COUNTS } from '@/lib/types';
 
 // Coinflow's component pulls in browser-only deps (iframes, postMessage).
 // Lazy-load on the client so it doesn't run in SSR.
@@ -22,8 +23,6 @@ const RPC_URL =
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 const MERCHANT_ID = process.env.NEXT_PUBLIC_COINFLOW_MERCHANT_ID || '';
 
-const PRESETS = [25, 50, 100, 250];
-
 type CoinflowSession = { sessionKey: string; env: 'sandbox' | 'prod' };
 
 export default function DepositPage() {
@@ -31,10 +30,14 @@ export default function DepositPage() {
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
 
-  const [amount, setAmount] = React.useState<number>(50);
+  const [packType, setPackType] = React.useState<PackType>('pokemon_50');
+  const [quantity, setQuantity] = React.useState<number>(1);
   const [session, setSession] = React.useState<CoinflowSession | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const unitPrice = PACK_CONFIG[packType].price;
+  const subtotalUsd = unitPrice * quantity;
 
   const startCheckout = async () => {
     if (!wallet?.address) return;
@@ -87,58 +90,59 @@ export default function DepositPage() {
         ) : (
           <div className="space-y-6">
             <div>
-              <h1 className="text-2xl font-bold">Add Funds</h1>
+              <h1 className="text-2xl font-bold">Buy Packs</h1>
               <p className="text-sm text-[var(--cb-text-muted)] mt-1">
-                Top up your balance to pull the machine.
+                Pay with card. Funds settle to your wallet, ready to pull.
               </p>
             </div>
 
             <div className="rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-5 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[var(--cb-accent)]/10 flex items-center justify-center flex-shrink-0">
-                  <svg
-                    className="w-5 h-5 text-[var(--cb-accent)]"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider mb-1.5">
+                    Pack Type
+                  </label>
+                  <select
+                    value={packType}
+                    onChange={(e) => setPackType(e.target.value as PackType)}
+                    className="w-full rounded-lg border border-[var(--cb-border)] bg-[var(--cb-bg)] px-3 py-2.5 text-sm font-semibold text-[var(--cb-text)] focus:outline-none focus:border-[var(--cb-accent)]"
                   >
-                    <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />
-                    <line x1="1" y1="10" x2="23" y2="10" />
-                  </svg>
+                    {(Object.keys(PACK_CONFIG) as PackType[]).map((t) => (
+                      <option key={t} value={t}>
+                        {PACK_CONFIG[t].label} — ${PACK_CONFIG[t].price}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <h2 className="text-base font-bold">Buy with Card</h2>
-                  <p className="text-xs text-[var(--cb-text-muted)]">
-                    Apple Pay, Google Pay, or debit card
-                  </p>
+                  <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider mb-1.5">
+                    Quantity
+                  </label>
+                  <select
+                    value={quantity}
+                    onChange={(e) => setQuantity(Number(e.target.value))}
+                    className="w-full rounded-lg border border-[var(--cb-border)] bg-[var(--cb-bg)] px-3 py-2.5 text-sm font-semibold text-[var(--cb-text)] focus:outline-none focus:border-[var(--cb-accent)]"
+                  >
+                    {YOLO_COUNTS.map((n) => (
+                      <option key={n} value={n}>
+                        {n === 1 ? '1 Pack' : `${n} Packs`} — $
+                        {(unitPrice * n).toFixed(2)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-[10px] font-semibold text-[var(--cb-text-muted)] uppercase tracking-wider mb-2">
-                  Amount
-                </label>
-                <div className="grid grid-cols-4 gap-2">
-                  {PRESETS.map((value) => (
-                    <button
-                      key={value}
-                      onClick={() => setAmount(value)}
-                      className={`rounded-lg border px-2 py-3 text-center transition-all ${
-                        amount === value
-                          ? 'border-[var(--cb-accent)] bg-[var(--cb-accent)]/10 text-[var(--cb-accent)]'
-                          : 'border-[var(--cb-border)] text-[var(--cb-text-muted)] hover:bg-[var(--cb-surface-hover)]'
-                      }`}
-                    >
-                      <span className="text-base font-bold">${value}</span>
-                    </button>
-                  ))}
-                </div>
+              <div className="flex items-center justify-between text-sm pt-1">
+                <span className="text-[var(--cb-text-muted)]">Subtotal</span>
+                <span className="font-bold tabular-nums">
+                  ${subtotalUsd.toFixed(2)}
+                </span>
               </div>
 
               <button
                 onClick={startCheckout}
-                disabled={loading || amount <= 0}
+                disabled={loading || subtotalUsd <= 0}
                 className="w-full py-3 rounded-xl bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] font-bold text-sm transition-colors disabled:opacity-50"
               >
                 {loading ? (
@@ -150,7 +154,7 @@ export default function DepositPage() {
                     Opening checkout...
                   </span>
                 ) : (
-                  `Add $${amount}`
+                  `Buy ${quantity} ${quantity === 1 ? 'Pack' : 'Packs'} — $${subtotalUsd.toFixed(2)}`
                 )}
               </button>
 
@@ -161,7 +165,7 @@ export default function DepositPage() {
               )}
 
               <p className="text-[10px] text-[var(--cb-text-muted)] text-center">
-                USDC arrives in your wallet in seconds.
+                USDC settles to your wallet in seconds.
               </p>
             </div>
 
@@ -196,7 +200,8 @@ export default function DepositPage() {
         <CoinflowModal
           session={session}
           wallet={wallet as unknown as WalletAdapter}
-          amountUsd={amount}
+          amountUsd={subtotalUsd}
+          headline={`${quantity} ${quantity === 1 ? PACK_CONFIG[packType].label : PACK_CONFIG[packType].label + 's'}`}
           email={user?.email?.address ?? undefined}
           onClose={() => setSession(null)}
         />
@@ -209,12 +214,14 @@ function CoinflowModal({
   session,
   wallet,
   amountUsd,
+  headline,
   email,
   onClose,
 }: {
   session: CoinflowSession;
   wallet: WalletAdapter;
   amountUsd: number;
+  headline: string;
   email?: string;
   onClose: () => void;
 }) {
@@ -253,7 +260,12 @@ function CoinflowModal({
     <Overlay onClose={onClose}>
       <div className="rounded-2xl bg-[var(--cb-surface)] border border-[var(--cb-border)] w-full max-w-md max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--cb-border)]">
-          <h3 className="text-sm font-bold">Add ${amountUsd}</h3>
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold truncate">Buy Packs</h3>
+            <p className="text-[11px] text-[var(--cb-text-muted)] truncate">
+              {headline} · ${amountUsd.toFixed(2)}
+            </p>
+          </div>
           <button
             onClick={onClose}
             aria-label="Close"
