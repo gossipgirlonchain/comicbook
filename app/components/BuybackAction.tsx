@@ -93,7 +93,14 @@ export default function BuybackAction({
       onComplete?.();
     } catch (e) {
       if (e instanceof ApiError && e.status === 400) {
-        setError('Buyback window expired (24h).');
+        // CC returns 400 with messages like "No matching NFT found within
+        // the allowed time window" (72-hour buyback window) or other
+        // validation failures. Surface CC's message when available.
+        const msg =
+          (e.data?.error as string) ||
+          (e.data?.message as string) ||
+          'Buyback window expired (72h).';
+        setError(msg);
       } else {
         setError(e instanceof Error ? e.message : 'Buyback failed');
       }
