@@ -2,17 +2,32 @@
 
 import * as React from 'react';
 import { useWallets } from '@privy-io/react-auth/solana';
-import { gachaApi, ApiError } from '@/lib/api';
-import { signTransaction, getNftImageUrl } from '@/lib/solana';
-import type { OpenPackResult, WalletAdapter } from '@/lib/types';
-import { RARITY_COLORS } from '@/lib/types';
-import { markSoldBack } from '@/lib/collection';
+import { getNftImageUrl } from '@/lib/solana';
+import type { OpenPackResult, WalletAdapter, Rarity } from '@/lib/types';
+import { RARITY_COLORS, insuredValueToRarity } from '@/lib/types';
+import BuybackAction, {
+  getInsuredValueFromAttrs,
+} from '@/app/components/BuybackAction';
 
 type Props = {
   results: OpenPackResult[];
   onClose: () => void;
   onBuybackComplete?: () => void;
 };
+
+// CC's OpenPackResult.rarity returns the printed TCG rarity (e.g. "Uncommon"
+// for a Mew Gold Star). Our app's rarity is a value-bucket tier matching the
+// odds table on the vending machine. Always derive ours from insuredValue
+// so the badge in the reveal matches what the inventory / collection shows.
+function rarityFor(result: OpenPackResult): Rarity {
+  const insured = getInsuredValueFromAttrs(
+    result.nftWon.content.metadata.attributes
+  );
+  if (insured > 0) return insuredValueToRarity(insured);
+  // Fall back to whatever CC sent if we don't have an Insured Value attr —
+  // better than defaulting to Common when we genuinely don't know.
+  return result.rarity ?? 'Common';
+}
 
 export default function PackReveal({
   results,
@@ -49,7 +64,7 @@ export default function PackReveal({
   const current = results[currentIdx];
   if (!current) return null;
 
-  const rarity = current.rarity;
+  const rarity = rarityFor(current);
   const colors = RARITY_COLORS[rarity] || RARITY_COLORS.Common;
 
   if (showSummary) {
@@ -88,6 +103,10 @@ export default function PackReveal({
       </div>
     );
   }
+
+  const insuredValue = getInsuredValueFromAttrs(
+    current.nftWon.content.metadata.attributes
+  );
 
   return (
     <div
@@ -176,7 +195,11 @@ export default function PackReveal({
                   <div className="flex items-center gap-4 text-sm">
                     <ValuePill
                       label="Value"
-                      value={getInsuredValue(current)}
+                      value={
+                        insuredValue
+                          ? `$${insuredValue.toFixed(2)}`
+                          : 'N/A'
+                      }
                       color="text-[var(--cb-success)]"
                     />
                     <ValuePill
@@ -187,10 +210,14 @@ export default function PackReveal({
                   </div>
 
                   <div className="flex gap-2 pt-1">
-                    <BuybackButton
-                      result={current}
+                    <BuybackAction
                       wallet={wallet as unknown as WalletAdapter}
+                      nftAddress={current.nft_address}
+                      cardName={current.nftWon.content.metadata.name}
+                      cardImage={getNftImageUrl(current.nftWon)}
+                      insuredValue={insuredValue}
                       onComplete={onBuybackComplete}
+                      className="flex-1"
                     />
                     <button
                       onClick={advanceOrSummary}
@@ -230,216 +257,6 @@ function ValuePill({
   );
 }
 
-function BuybackButton({
-  result,
-  wallet,
-  onComplete,
-}: {
-  result: OpenPackResult;
-  wallet: WalletAdapter | undefined;
-  onComplete?: () => void;
-}) {
-  const [busy, setBusy] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
-  const [done, setDone] = React.useState(false);
-  const [confirming, setConfirming] = React.useState(false);
-
-  const insuredValue = (() => {
-    const attr = result.nftWon.content.metadata.attributes.find(
-      (a) => a.trait_type === 'Insured Value'
-    );
-    return attr ? parseFloat(attr.value) : 0;
-  })();
-
-  const sellPrice = (insuredValue * 0.85).toFixed(2);
-
-  const handleBuyback = async () => {
-    if (!wallet) return;
-    setBusy(true);
-    setError(null);
-
-    try {
-      const { serializedTransaction, memo } = await gachaApi.buyback(
-        wallet.address,
-        result.nft_address
-      );
-
-      const signed = await signTransaction(serializedTransaction, wallet);
-      await gachaApi.submitTransaction(signed);
-
-      if (memo) {
-        await gachaApi.pollBuybackCheck(memo);
-      }
-
-      // Record locally so the card disappears from My Collection. CC has no
-      // per-card buyback flag yet, so this is a pragmatic stopgap.
-      markSoldBack(wallet.address, result.nft_address);
-
-      setDone(true);
-      setConfirming(false);
-      onComplete?.();
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 400) {
-        setError('Buyback window expired (24h).');
-      } else {
-        setError(e instanceof Error ? e.message : 'Buyback failed');
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  if (done) {
-    return (
-      <div className="flex-1 py-2.5 rounded-lg bg-[var(--cb-success)]/20 text-[var(--cb-success)] text-center text-sm font-semibold">
-        Sold!
-      </div>
-    );
-  }
-
-  return (
-    <>
-      <div className="flex-1">
-        <button
-          onClick={() => setConfirming(true)}
-          disabled={busy || !wallet}
-          className="w-full py-2.5 rounded-lg border border-[var(--cb-accent)]/40 text-[var(--cb-accent)] font-semibold text-sm hover:bg-[var(--cb-accent)]/10 disabled:opacity-40 transition-colors"
-        >
-          {busy ? 'Selling...' : `Sell $${sellPrice}`}
-        </button>
-        {error && (
-          <p className="text-xs text-[var(--cb-error)] mt-1">{error}</p>
-        )}
-      </div>
-
-      {confirming && (
-        <SellConfirmDialog
-          cardName={result.nftWon.content.metadata.name}
-          cardImage={getNftImageUrl(result.nftWon)}
-          insuredValue={insuredValue}
-          sellPrice={sellPrice}
-          busy={busy}
-          error={error}
-          onCancel={() => {
-            if (busy) return;
-            setConfirming(false);
-            setError(null);
-          }}
-          onConfirm={handleBuyback}
-        />
-      )}
-    </>
-  );
-}
-
-function SellConfirmDialog({
-  cardName,
-  cardImage,
-  insuredValue,
-  sellPrice,
-  busy,
-  error,
-  onCancel,
-  onConfirm,
-}: {
-  cardName: string;
-  cardImage: string;
-  insuredValue: number;
-  sellPrice: string;
-  busy: boolean;
-  error: string | null;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <div
-      className="fixed inset-0 z-[60] flex items-center justify-center p-4 overlay-enter"
-      style={{ background: 'rgba(8, 13, 26, 0.92)' }}
-      onClick={onCancel}
-    >
-      <div
-        className="relative max-w-sm w-full rounded-2xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-6 space-y-4 reveal-enter"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-20 h-20 rounded-lg bg-[var(--cb-bg)] flex-shrink-0 overflow-hidden border border-[var(--cb-border)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={cardImage}
-              alt={cardName}
-              className="w-full h-full object-contain p-1"
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-bold truncate">Sell back to house?</h3>
-            <p className="text-xs text-[var(--cb-text-muted)] truncate mt-0.5">
-              {cardName}
-            </p>
-          </div>
-        </div>
-
-        <div className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-bg)] p-3 space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[var(--cb-text-muted)]">Insured value</span>
-            <span className="font-semibold">${insuredValue.toFixed(2)}</span>
-          </div>
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-[var(--cb-text-muted)]">Buyback rate</span>
-            <span className="font-semibold">85%</span>
-          </div>
-          <div className="h-px bg-[var(--cb-border)]" />
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-[var(--cb-text-muted)]">
-              You receive
-            </span>
-            <span className="text-xl font-bold text-[var(--cb-success)]">
-              ${sellPrice}
-            </span>
-          </div>
-        </div>
-
-        <p className="text-[11px] text-[var(--cb-text-muted)] leading-snug">
-          The card will be returned to the house and cannot be recovered.
-          Funds arrive in your wallet instantly once the transaction confirms.
-        </p>
-
-        {error && (
-          <p className="text-xs text-[var(--cb-error)] bg-[var(--cb-error)]/10 border border-[var(--cb-error)]/30 rounded-lg p-2">
-            {error}
-          </p>
-        )}
-
-        <div className="flex gap-2 pt-1">
-          <button
-            onClick={onCancel}
-            disabled={busy}
-            className="flex-1 py-2.5 rounded-lg border border-[var(--cb-border)] text-sm font-semibold text-[var(--cb-text-muted)] hover:text-[var(--cb-text)] hover:bg-[var(--cb-surface-hover)] transition-colors disabled:opacity-40"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={onConfirm}
-            disabled={busy}
-            className="flex-1 py-2.5 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] text-sm font-bold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {busy ? (
-              <>
-                <span
-                  className="spinner"
-                  style={{ width: 14, height: 14, borderWidth: 2 }}
-                />
-                Selling...
-              </>
-            ) : (
-              `Confirm Sell $${sellPrice}`
-            )}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function SummaryGrid({
   results,
   wallet,
@@ -461,7 +278,8 @@ function SummaryGrid({
           <div>
             <h2 className="text-xl font-bold">Your Pulls</h2>
             <p className="text-sm text-[var(--cb-text-muted)]">
-              {results.length} {results.length === 1 ? 'pull' : 'pulls'}
+              {results.length} {results.length === 1 ? 'pull' : 'pulls'} —
+              keep them, or sell back for 85% instantly.
             </p>
           </div>
           <button
@@ -472,39 +290,51 @@ function SummaryGrid({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 p-6 max-h-[75vh] overflow-y-auto">
           {results.map((result, i) => {
-            const r = result.rarity;
+            const r = rarityFor(result);
             const c = RARITY_COLORS[r] || RARITY_COLORS.Common;
+            const insured = getInsuredValueFromAttrs(
+              result.nftWon.content.metadata.attributes
+            );
             return (
               <div
                 key={result.nft_address || i}
-                className={`rounded-xl border ${c.border} bg-[var(--cb-bg)] overflow-hidden slide-up`}
+                className={`rounded-xl border ${c.border} bg-[var(--cb-bg)] overflow-hidden slide-up flex flex-col`}
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={getNftImageUrl(result.nftWon)}
-                  alt={result.nftWon.content.metadata.name}
-                  className="w-full aspect-square object-contain p-2"
-                />
-                <div className="p-2 space-y-1">
-                  <p className="text-xs font-semibold truncate">
+                <div className="relative">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={getNftImageUrl(result.nftWon)}
+                    alt={result.nftWon.content.metadata.name}
+                    className="w-full aspect-square object-contain p-2"
+                  />
+                  <span
+                    className={`absolute top-2 left-2 text-[10px] font-bold px-1.5 py-0.5 rounded ${c.bg} ${c.text}`}
+                  >
+                    {r}
+                  </span>
+                </div>
+                <div className="p-3 space-y-2 border-t border-[var(--cb-border)]/50">
+                  <p
+                    className="text-xs font-semibold truncate"
+                    title={result.nftWon.content.metadata.name}
+                  >
                     {result.nftWon.content.metadata.name}
                   </p>
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${c.bg} ${c.text}`}
-                    >
-                      {r}
-                    </span>
-                    <span className="text-[10px] text-[var(--cb-success)] font-bold">
-                      {getInsuredValue(result)}
+                  <div className="flex items-baseline justify-between text-xs">
+                    <span className="text-[var(--cb-text-muted)]">Value</span>
+                    <span className="text-sm font-bold text-[var(--cb-success)]">
+                      {insured ? `$${insured.toFixed(2)}` : 'N/A'}
                     </span>
                   </div>
-                  <BuybackButton
-                    result={result}
+                  <BuybackAction
                     wallet={wallet}
+                    nftAddress={result.nft_address}
+                    cardName={result.nftWon.content.metadata.name}
+                    cardImage={getNftImageUrl(result.nftWon)}
+                    insuredValue={insured}
                     onComplete={onBuybackComplete}
                   />
                 </div>
@@ -512,16 +342,21 @@ function SummaryGrid({
             );
           })}
         </div>
+
+        <div className="px-6 py-4 border-t border-[var(--cb-border)] bg-[var(--cb-bg)]/40 flex items-center justify-between gap-3">
+          <p className="text-xs text-[var(--cb-text-muted)]">
+            You can also sell back any time from your inventory.
+          </p>
+          <button
+            onClick={onClose}
+            className="py-2 px-4 rounded-lg bg-[var(--cb-accent)] hover:bg-[var(--cb-accent-hover)] text-[var(--cb-accent-text)] text-sm font-semibold transition-colors"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );
-}
-
-function getInsuredValue(result: OpenPackResult): string {
-  const attr = result.nftWon.content.metadata.attributes.find(
-    (a) => a.trait_type === 'Insured Value'
-  );
-  return attr ? `$${attr.value}` : 'N/A';
 }
 
 function getGrade(result: OpenPackResult): string {

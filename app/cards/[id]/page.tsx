@@ -9,8 +9,11 @@ import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import { getNftImageUrl } from '@/lib/solana';
-import type { MachinePull, NftWon } from '@/lib/types';
+import type { MachinePull, NftWon, WalletAdapter } from '@/lib/types';
 import { RARITY_COLORS, type Rarity } from '@/lib/types';
+import BuybackAction from '@/app/components/BuybackAction';
+import { getSoldBackIds } from '@/lib/collection';
+import { useRouter } from 'next/navigation';
 
 function getAttr(nft: NftWon, trait: string): string | null {
   return (
@@ -21,6 +24,7 @@ function getAttr(nft: NftWon, trait: string): string | null {
 
 export default function CardDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
   const { ready, authenticated } = usePrivy();
   const { wallets } = useWallets();
   const wallet = wallets?.[0];
@@ -28,6 +32,12 @@ export default function CardDetailPage() {
   const [pull, setPull] = React.useState<MachinePull | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [alreadySold, setAlreadySold] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!wallet?.address || !id) return;
+    setAlreadySold(getSoldBackIds(wallet.address).has(id));
+  }, [wallet?.address, id]);
 
   React.useEffect(() => {
     if (!wallet?.address) return;
@@ -252,10 +262,36 @@ export default function CardDetailPage() {
               )}
             </div>
 
-            <div className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-4">
-              <p className="text-xs text-[var(--cb-text-muted)]">
-                Cards can be sold back to the house for 85% of their insured
-                value from your inventory or directly after opening a pack.
+            <div className="rounded-xl border border-[var(--cb-border)] bg-[var(--cb-surface)] p-4 space-y-3">
+              {alreadySold ? (
+                <div className="rounded-lg bg-[var(--cb-success)]/15 border border-[var(--cb-success)]/30 text-[var(--cb-success)] text-center text-sm font-semibold py-2 px-3">
+                  Sold back to house
+                </div>
+              ) : insuredValue ? (
+                <BuybackAction
+                  wallet={wallet as unknown as WalletAdapter}
+                  nftAddress={card.id}
+                  cardName={name}
+                  cardImage={img}
+                  insuredValue={parseFloat(String(insuredValue)) || 0}
+                  variant="solid"
+                  label="Sell to house"
+                  onComplete={() => {
+                    setAlreadySold(true);
+                    // Drop the user back to inventory after a moment so the
+                    // collection list reflects the change.
+                    setTimeout(() => router.push('/inventory'), 1200);
+                  }}
+                />
+              ) : (
+                <p className="text-xs text-[var(--cb-text-muted)]">
+                  This card has no insured value, so it can&apos;t be sold
+                  back to the house.
+                </p>
+              )}
+              <p className="text-[11px] text-[var(--cb-text-muted)] leading-snug">
+                Sell-backs return 85% of the card&apos;s insured value to your
+                wallet. Funds usually arrive within a minute.
               </p>
             </div>
           </div>

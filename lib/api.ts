@@ -149,8 +149,12 @@ async function pollOpenPack(memo: string): Promise<OpenPackResult> {
 }
 
 async function pollBuybackCheck(memo: string): Promise<BuybackCheckResult> {
-  const TIMEOUT = 30_000;
-  const INTERVAL = 500;
+  // CC's buyback webhook depends on Solana confirmation + their own indexer
+  // catching up. 30s wasn't enough on devnet under load — bumping to 90s.
+  // Caller treats a thrown timeout as "submitted, pending confirmation"
+  // rather than a hard failure.
+  const TIMEOUT = 90_000;
+  const INTERVAL = 1_500;
   const start = Date.now();
 
   while (Date.now() - start < TIMEOUT) {

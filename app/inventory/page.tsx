@@ -8,8 +8,10 @@ import Header from '@/app/components/Header';
 import Footer from '@/app/components/Footer';
 import PrivyConnect from '@/app/components/PrivyConnect';
 import { getNftImageUrl } from '@/lib/solana';
-import type { MachinePull } from '@/lib/types';
+import type { MachinePull, WalletAdapter } from '@/lib/types';
 import { RARITY_COLORS } from '@/lib/types';
+import { getSoldBackIds } from '@/lib/collection';
+import BuybackAction from '@/app/components/BuybackAction';
 
 const NETWORK = process.env.NEXT_PUBLIC_SOLANA_NETWORK || 'devnet';
 const EXPLORER_CLUSTER =
@@ -34,42 +36,56 @@ export default function InventoryPage() {
   const [pulls, setPulls] = React.useState<EnrichedPull[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Sold-back set lives in localStorage; bump this to recompute after a sale.
+  const [soldKey, setSoldKey] = React.useState(0);
+
+  const reloadPulls = React.useCallback(async () => {
+    if (!wallet?.address) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(
+        `/api/machinePulls?address=${encodeURIComponent(wallet.address)}`,
+        { cache: 'no-store' }
+      );
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      const raw = (data.pulls ?? []) as MachinePull[];
+      setPulls(raw.map((p) => ({ ...p, status: deriveStatus(p) })));
+    } catch (e) {
+      console.error('[inventory] load pulls failed:', e);
+      setError(e instanceof Error ? e.message : 'Failed to load inventory');
+    } finally {
+      setLoading(false);
+    }
+  }, [wallet?.address]);
 
   React.useEffect(() => {
-    if (!wallet?.address) return;
     let alive = true;
-
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const res = await fetch(
-          `/api/machinePulls?address=${encodeURIComponent(wallet.address)}`,
-          { cache: 'no-store' }
-        );
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
-        if (!alive) return;
-        const raw = (data.pulls ?? []) as MachinePull[];
-        setPulls(raw.map((p) => ({ ...p, status: deriveStatus(p) })));
-      } catch (e) {
-        console.error('[inventory] load pulls failed:', e);
-        if (alive)
-          setError(
-            e instanceof Error ? e.message : 'Failed to load inventory'
-          );
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-
-    load();
+    if (!wallet?.address) return;
+    (async () => {
+      if (alive) await reloadPulls();
+    })();
     return () => {
       alive = false;
     };
-  }, [wallet?.address]);
+  }, [wallet?.address, reloadPulls]);
 
-  const revealed = pulls.filter((p) => p.status === 'revealed' && p.card);
+  const sold = React.useMemo(() => {
+    if (!wallet?.address) return new Set<string>();
+    return getSoldBackIds(wallet.address);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wallet?.address, soldKey]);
+
+  // Collection only shows cards the user still owns. Sold cards are filtered
+  // out using the localStorage flag set by BuybackAction.
+  const revealed = pulls.filter(
+    (p) => p.status === 'revealed' && p.card && !sold.has(p.card.id)
+  );
+
+  const onSold = React.useCallback(() => {
+    setSoldKey((k) => k + 1);
+  }, []);
 
   const tabs = [
     { id: 'collection' as const, label: `Collection${revealed.length ? ` (${revealed.length})` : ''}` },
@@ -115,6 +131,8 @@ export default function InventoryPage() {
                 loading={loading}
                 error={error}
                 pulls={revealed}
+                wallet={wallet as unknown as WalletAdapter | undefined}
+                onSold={onSold}
               />
             )}
 
@@ -134,10 +152,14 @@ function CollectionGrid({
   loading,
   error,
   pulls,
+  wallet,
+  onSold,
 }: {
   loading: boolean;
   error: string | null;
   pulls: EnrichedPull[];
+  wallet: WalletAdapter | undefined;
+  onSold: () => void;
 }) {
   if (loading) {
     return (
@@ -176,54 +198,91 @@ function CollectionGrid({
 
   return (
     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-      {pulls.map((p) => {
-        if (!p.card) return null;
-        const { card } = p;
-        const colors = card.rarity ? RARITY_COLORS[card.rarity] : null;
-        const name = card.nftWon.content.metadata.name || card.id;
-        const img = getNftImageUrl(card.nftWon);
-        return (
-          <Link
-            key={p.memo}
-            href={`/cards/${card.id}`}
-            className={`group rounded-xl border overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 ${
-              colors
-                ? `${colors.border} hover:${colors.glow}`
-                : 'border-[var(--cb-border)]'
-            } bg-[var(--cb-surface)]`}
-          >
-            <div className="aspect-square bg-[var(--cb-bg)] p-2">
-              {img ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={img}
-                  alt={name}
-                  className="w-full h-full object-contain rounded-lg"
-                />
-              ) : (
-                <div className="w-full h-full rounded-lg bg-[var(--cb-surface)]" />
-              )}
-            </div>
-            <div className="p-2.5">
-              <p className="text-xs font-semibold truncate">{name}</p>
-              <div className="flex items-center justify-between mt-1">
-                {card.rarity && colors && (
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}
-                  >
-                    {card.rarity}
-                  </span>
-                )}
-                {card.insuredValue && (
-                  <span className="text-[10px] font-bold text-[var(--cb-success)]">
-                    ${card.insuredValue}
-                  </span>
-                )}
-              </div>
-            </div>
-          </Link>
-        );
-      })}
+      {pulls.map((p) => (
+        <CollectionCard
+          key={p.memo}
+          pull={p}
+          wallet={wallet}
+          onSold={onSold}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CollectionCard({
+  pull,
+  wallet,
+  onSold,
+}: {
+  pull: EnrichedPull;
+  wallet: WalletAdapter | undefined;
+  onSold: () => void;
+}) {
+  if (!pull.card) return null;
+  const { card } = pull;
+  const colors = card.rarity ? RARITY_COLORS[card.rarity] : null;
+  const name = card.nftWon.content.metadata.name || card.id;
+  const img = getNftImageUrl(card.nftWon);
+  const insuredValue = card.insuredValue
+    ? parseFloat(card.insuredValue) || 0
+    : 0;
+
+  return (
+    <div
+      className={`group rounded-xl border overflow-hidden transition-all hover:shadow-lg ${
+        colors
+          ? `${colors.border} hover:${colors.glow}`
+          : 'border-[var(--cb-border)]'
+      } bg-[var(--cb-surface)] flex flex-col`}
+    >
+      <Link href={`/cards/${card.id}`} className="block">
+        <div className="aspect-square bg-[var(--cb-bg)] p-2">
+          {img ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={img}
+              alt={name}
+              className="w-full h-full object-contain rounded-lg"
+            />
+          ) : (
+            <div className="w-full h-full rounded-lg bg-[var(--cb-surface)]" />
+          )}
+        </div>
+        <div className="px-2.5 pt-2.5">
+          <p className="text-xs font-semibold truncate">{name}</p>
+          <div className="flex items-center justify-between mt-1">
+            {card.rarity && colors && (
+              <span
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${colors.bg} ${colors.text}`}
+              >
+                {card.rarity}
+              </span>
+            )}
+            {insuredValue > 0 && (
+              <span className="text-[10px] font-bold text-[var(--cb-success)]">
+                ${insuredValue.toFixed(2)}
+              </span>
+            )}
+          </div>
+        </div>
+      </Link>
+      <div className="px-2.5 pb-2.5 pt-2 mt-auto">
+        {insuredValue > 0 ? (
+          <BuybackAction
+            wallet={wallet}
+            nftAddress={card.id}
+            cardName={name}
+            cardImage={img}
+            insuredValue={insuredValue}
+            onComplete={onSold}
+          />
+        ) : (
+          <div className="text-[10px] text-center text-[var(--cb-text-muted)] py-2">
+            No insured value
+          </div>
+        )}
+      </div>
     </div>
   );
 }
